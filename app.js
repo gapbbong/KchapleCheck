@@ -60,9 +60,24 @@ function init() {
 function loadSettings() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
-    try { settings = { ...settings, ...JSON.parse(saved) }; } catch {}
+    try { 
+      const parsed = JSON.parse(saved);
+      // [마이그레이션] 이전 연습용/구버전 URL이 저장되어 있다면 최신 버전으로 강제 업데이트
+      if (parsed.gasUrl && (
+          parsed.gasUrl.includes('feNN3-B') || 
+          parsed.gasUrl.includes('a4Hhx') || 
+          parsed.gasUrl.includes('Gu4ctq') ||
+          parsed.gasUrl.includes('Hhx')
+      )) {
+        parsed.gasUrl = DEFAULT_GAS;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      }
+      settings = { ...settings, ...parsed }; 
+    } catch {
+      settings = { ...settings };
+    }
   }
-  // 저장된 URL이 없으면 기본값 사용
+  // 저장된 URL이 없거나 마이그레이션 후에도 비어있으면 기본값 사용
   if (!settings.gasUrl) settings.gasUrl = DEFAULT_GAS;
   gasUrlInput.value          = settings.gasUrl;
   thresholdValEl.textContent = settings.threshold;
