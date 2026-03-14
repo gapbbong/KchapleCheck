@@ -1,0 +1,12 @@
+{
+  "name": "kchaple-check",
+  "version": "1.0.0",
+  "description": "경성전자고 예배 출석 체크 웹앱",
+  "scripts": {
+    "start": "npx serve . -p 3000 --no-clipboard",
+    "dev": "npx serve . -p 3000"
+  },
+  "keywords": ["attendance", "chapel", "school"],
+  "author": "경성전자고",
+  "license": "MIT"
+}

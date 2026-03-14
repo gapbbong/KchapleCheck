@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>경성전자고 예배 출석 체크</title>
+  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="apple-touch-icon" href="logo.png" />
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ===== 스플래시 화면 ===== -->
+<div id="splash" class="splash hidden">
+  <div class="splash-inner">
+    <img src="logo.png" alt="경성전자고" class="splash-logo" />
+    <div class="splash-name">경성전자고등학교</div>
+    <div class="splash-sub">예배 출석 체크</div>
+    <div class="splash-spinner"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- ===== 메인 화면 ===== -->
+<div id="app" class="screen active">
+
+  <!-- 헤더 -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="school-badge">✝</span>
+      <div>
+        <div class="school-name">경성전자고등학교</div>
+        <div class="event-name">예배 출석 체크</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn" id="statsBtn" title="출석 통계">
+        <span class="material-icons-round">bar_chart</span>
+      </button>
+      <button class="icon-btn" id="settingsBtn" title="설정">
+        <span class="material-icons-round">settings</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 날짜 표시 -->
+  <div class="date-display" id="dateDisplay"></div>
+
+  <!-- 최근 출석자 리스트 -->
+  <div class="recent-list-wrapper">
+    <div class="section-label">오늘 출석한 학생</div>
+    <div id="recentList" class="recent-list">
+      <div class="empty-msg">아직 출석한 학생이 없습니다</div>
+    </div>
+  </div>
+
+  <!-- 입력 디스플레이 -->
+  <div class="input-area">
+    <div class="id-display" id="idDisplay">
+      <span id="idText" class="id-placeholder">학번 입력</span>
+    </div>
+    <!-- 결과 표시 -->
+    <div class="result-badge" id="resultBadge"></div>
+  </div>
+
+  <!-- 숫자 키패드 -->
+  <div class="keypad">
+    <button class="key" data-val="1">1</button>
+    <button class="key" data-val="2">2</button>
+    <button class="key" data-val="3">3</button>
+    <button class="key" data-val="4">4</button>
+    <button class="key" data-val="5">5</button>
+    <button class="key" data-val="6">6</button>
+    <button class="key" data-val="7">7</button>
+    <button class="key" data-val="8">8</button>
+    <button class="key" data-val="9">9</button>
+    <button class="key key-clear" id="clearBtn">
+      <span class="material-icons-round">backspace</span>
+    </button>
+    <button class="key" data-val="0">0</button>
+    <button class="key key-submit" id="submitBtn">
+      <span class="material-icons-round">check_circle</span>
+    </button>
+  </div>
+
+</div>
+
+<!-- ===== 통계 화면 ===== -->
+<div id="statsScreen" class="screen">
+  <header class="app-header sub">
+    <button class="icon-btn back-btn" id="statsBack">
+      <span class="material-icons-round">arrow_back_ios_new</span>
+    </button>
+    <div class="screen-title">출석 통계</div>
+    <button class="icon-btn" id="refreshStats">
+      <span class="material-icons-round">refresh</span>
+    </button>
+  </header>
+
+  <div class="stats-content">
+    <!-- 요약 카드 -->
+    <div class="stats-summary-row">
+      <div class="stat-card">
+        <div class="stat-num" id="totalToday">-</div>
+        <div class="stat-label">오늘 출석</div>
+      </div>
+      <div class="stat-card highlight">
+        <div class="stat-num" id="snackCount">-</div>
+        <div class="stat-label">🍬 간식 대상</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="targetCount">-</div>
+        <div class="stat-label">목표 횟수</div>
+      </div>
+    </div>
+
+    <!-- 간식 대상자 -->
+    <div class="section-label">🎉 간식 받을 학생 (누적 <span id="snackThresholdLabel">3</span>회 이상)</div>
+    <div id="snackList" class="snack-list">
+      <div class="loading-spinner-wrap"><div class="spinner"></div></div>
+    </div>
+
+    <!-- 전체 기록 테이블 -->
+    <div class="section-label" style="margin-top:20px">전체 출석 기록</div>
+    <div id="allStatsList" class="all-stats-list">
+      <div class="loading-spinner-wrap"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 설정 화면 ===== -->
+<div id="settingsScreen" class="screen">
+  <header class="app-header sub">
+    <button class="icon-btn back-btn" id="settingsBack">
+      <span class="material-icons-round">arrow_back_ios_new</span>
+    </button>
+    <div class="screen-title">설정</div>
+    <div></div>
+  </header>
+
+  <div class="settings-content">
+    <div class="settings-card">
+      <div class="settings-item">
+        <div class="settings-label">
+          <span class="material-icons-round">link</span>
+          Google Apps Script URL
+        </div>
+        <textarea id="gasUrl" class="settings-input textarea" rows="3" placeholder="https://script.google.com/macros/s/.../exec"></textarea>
+      </div>
+
+      <div class="settings-item">
+        <div class="settings-label">
+          <span class="material-icons-round">cake</span>
+          간식 지급 기준 횟수
+        </div>
+        <div class="counter-row">
+          <button class="counter-btn" id="decreaseThreshold">−</button>
+          <span class="counter-val" id="thresholdVal">3</span>
+          <button class="counter-btn" id="increaseThreshold">+</button>
+        </div>
+      </div>
+
+      <button class="save-btn" id="saveSettings">
+        <span class="material-icons-round">save</span>
+        저장
+      </button>
+    </div>
+
+    <div class="settings-card danger-zone">
+      <div class="settings-label" style="color:#ef4444">
+        <span class="material-icons-round" style="color:#ef4444">warning</span>
+        위험 구역
+      </div>
+      <button class="danger-btn" id="clearTodayLocal">오늘 로컬 기록 초기화</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 전역 오버레이 (성공/실패 팝업) ===== -->
+<div id="overlay" class="overlay hidden">
+  <div class="overlay-card" id="overlayCard">
+    <div class="overlay-icon" id="overlayIcon"></div>
+    <div class="overlay-name" id="overlayName"></div>
+    <div class="overlay-sub" id="overlaySub"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  // 세션 첫 방문 시에만 스플래시 표시
+  const splash = document.getElementById('splash');
+  if (!sessionStorage.getItem('splashShown')) {
+    splash.classList.remove('hidden');
+    splash.classList.add('show');
+    sessionStorage.setItem('splashShown', '1');
+    setTimeout(() => {
+      splash.classList.add('fade-out');
+      setTimeout(() => splash.classList.add('hidden'), 500);
+    }, 1600);
+  }
+</script>
+</body>
+</html>
