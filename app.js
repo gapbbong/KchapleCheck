@@ -298,7 +298,13 @@ async function submitAttendance() {
     const url = `${settings.gasUrl}?id=${encodeURIComponent(studentId)}`;
     console.log('[DEBUG] 요청 시작:', url);
     
-    const resp = await fetch(url);
+    // GAS 통신 최적화 옵션 추가
+    const resp = await fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache',
+      redirect: 'follow'
+    });
     const text = (await resp.text()).trim();
     console.log('[DEBUG] 서버 응답:', text);
 
