@@ -58,8 +58,8 @@ function handleAttendance(studentId) {
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
-    sheet.appendRow(["학번", "이름", "시간"]);
-    sheet.getRange("A1:C1").setBackground("#eeeeee").setFontWeight("bold");
+    sheet.appendRow(["날짜", "시간", "학번", "이름", "학번+이름", "누적횟수"]);
+    sheet.getRange("A1:F1").setBackground("#eeeeee").setFontWeight("bold");
   }
   
   // 중복 체크 (사용자 요청: 1117 학생 등이 같은 시트 내에서 여러 번 기록될 수 있으므로 중복 체크 완화)
@@ -80,11 +80,21 @@ function handleAttendance(studentId) {
   }
   
   var timeStr = Utilities.formatDate(now, "GMT+9", "HH:mm:ss");
-  sheet.appendRow([studentId, name, timeStr]);
-  SpreadsheetApp.flush(); // 즉시 반영 강제 (실시간 카운트 정확도)
+  var dateStr = sheetName; // yyyy-MM-dd
   
-  // 누적 횟수 계산 (최적화된 방식)
-  var count = calculateStudentAttendance(studentId);
+  // 누적 횟수 미리 계산 (기록 시 포함하기 위함)
+  // 현재 기록 직전까지의 횟수 + 1 (방금 추가할 기록 포함)
+  var count = calculateStudentAttendance(studentId) + 1;
+  
+  sheet.appendRow([
+    dateStr,             // 날짜
+    timeStr,             // 시간
+    studentId,           // 학번
+    name,                // 이름
+    studentId + " " + name, // 학번+이름
+    count                // 누적횟수
+  ]);
+  SpreadsheetApp.flush(); // 즉시 반영
   
   return name + "|" + count;
 }
