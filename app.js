@@ -22,6 +22,7 @@ let currentInput = '';
 let isSubmitting = false;
 let currentTab   = 'pending'; // 'pending', 'received', 'all'
 let serverStats  = {};        // { id: { name, count, received } }
+let dailyStatsData = {};      // 서버에서 받아온 날짜별 통계 보관 (v2.2 추가)
 
 // ────────────────────────────────────
 // DOM 요소
@@ -229,6 +230,36 @@ function bindEvents() {
   // 오버레이 클릭으로 닫기
   overlay.addEventListener('click', closeOverlay);
 }
+
+// ────────────────────────────────────
+// 날짜별 통계 (v2.2)
+// ────────────────────────────────────
+function toggleDailyStats() {
+  const panel = document.getElementById('dailyStatsPanel');
+  panel.classList.toggle('hidden');
+  
+  if (!panel.classList.contains('hidden')) {
+    renderDailyStatsList();
+  }
+}
+
+function renderDailyStatsList() {
+  const listEl = document.getElementById('dailyStatsList');
+  const dates = Object.keys(dailyStatsData).sort().reverse();
+  
+  if (dates.length === 0) {
+    listEl.innerHTML = '<div class="empty-msg">데이터가 없습니다</div>';
+    return;
+  }
+  
+  listEl.innerHTML = dates.map(date => `
+    <div class="daily-item">
+      <span>${date}</span>
+      <span class="count">${dailyStatsData[date]}명</span>
+    </div>
+  `).join('');
+}
+
 
 // ────────────────────────────────────
 // 서버 데이터 통신
