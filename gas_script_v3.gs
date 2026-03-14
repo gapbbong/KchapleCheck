@@ -73,6 +73,7 @@ function handleAttendance(studentId) {
     }
   }
   
+  var now = new Date();
   var timeStr = Utilities.formatDate(now, "GMT+9", "HH:mm:ss");
   var dateStr = sheetName; // yyyy-MM-dd
   
