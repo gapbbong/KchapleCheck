@@ -53,8 +53,8 @@ function handleAttendance(studentId) {
   
   if (!name) return "NOT_FOUND";
   
-  // 오늘(월요일 기준 시트) 기록
-  var sheetName = getMondayDateString();
+  // 오늘 날짜($YYYY-MM-DD$) 시트 기록
+  var sheetName = getTodayDateString();
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
@@ -178,16 +178,12 @@ function recordSnack(id, name) {
 }
 
 /**
- * 이번 주 월요일 날짜 문자열 반환 (yyyy-MM-dd)
+ * 오늘 날짜 문자열 반환 ($YYYY-MM-DD$)
  */
-function getMondayDateString() {
+function getTodayDateString() {
   var now = new Date();
-  var day = now.getDay(); // 0(일) ~ 6(토)
-  var diff = (day === 0 ? -6 : 1 - day); // 월요일과의 차이
-  var monday = new Date(now.setDate(now.getDate() + diff));
-  
-  var y = monday.getFullYear();
-  var m = String(monday.getMonth() + 1).padStart(2, '0');
-  var d = String(monday.getDate()).padStart(2, '0');
+  var y = now.getFullYear();
+  var m = String(now.getMonth() + 1).padStart(2, '0');
+  var d = String(now.getDate()).padStart(2, '0');
   return y + "-" + m + "-" + d;
 }
