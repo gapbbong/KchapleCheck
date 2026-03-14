@@ -54,12 +54,31 @@ html, body {
 }
 .app-header.sub { padding: 16px 18px; }
 
-.header-left { display: flex; align-items: center; gap: 12px; }
+.header-left { display: flex; align-items: center; gap: 14px; }
 .school-badge {
-  width: 52px; height: 52px; border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent), #9b88ff);
+  width: 56px; height: 56px;
+  background: white; /* 흰색 배경 */
+  border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px; box-shadow: 0 0 16px rgba(108,99,255,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* 그림자 살짝 추가 */
+}
+.school-badge .cross-icon {
+  position: relative;
+  width: 6px;   /* 세로대 두께 */
+  height: 36px; /* 세로대 길이 */
+  background: #ff3b30;
+  border-radius: 3px;
+}
+.school-badge .cross-icon::after {
+  content: '';
+  position: absolute;
+  top: 8px; /* 가로대를 위쪽으로 배치하여 십자가 형태 완성 */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px; /* 가로대 길이 */
+  height: 6px; /* 가로대 두께 */
+  background: #ff3b30;
+  border-radius: 3px;
 }
 .school-name { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
 .event-name  { font-size: 12px; color: var(--text-sub); margin-top: 2px; font-weight: 500; }
@@ -81,10 +100,11 @@ html, body {
 /* ── Date ── */
 .date-display {
   text-align: center;
-  padding: 10px 0 6px;
-  font-size: 13px;
-  color: var(--text-sub);
-  letter-spacing: 0.5px;
+  padding: 12px 0 8px;
+  font-size: 15px; /* 조금 더 크게 */
+  color: #000000; /* 완전 검정 */
+  font-weight: 800; /* 아주 두껍게 */
+  letter-spacing: 0.2px;
 }
 
 /* ── Recent List ── */
@@ -277,31 +297,71 @@ html, body {
 .stat-card.highlight .stat-num { color: var(--gold); }
 .stat-label { font-size: 11px; color: var(--text-sub); margin-top: 4px; font-weight: 500; }
 
+/* ── Stats Tabs ── */
+.stats-tabs {
+  display: flex; gap: 8px;
+  padding: 0 20px;
+  margin-bottom: 16px;
+}
+.tab-btn {
+  flex: 1; padding: 10px; border-radius: 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-sub); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+}
+.tab-btn.active {
+  background: var(--accent); border-color: var(--accent);
+  color: white; box-shadow: 0 4px 12px rgba(108,99,255,0.25);
+}
+.tab-btn span { font-weight: 800; opacity: 0.9; }
+
 /* Snack List */
 .snack-list, .all-stats-list {
   padding: 0 20px;
   display: flex; flex-direction: column; gap: 8px;
 }
 .snack-item {
-  background: linear-gradient(135deg, rgba(245,200,66,0.12), rgba(245,200,66,0.04));
-  border: 1px solid rgba(245,200,66,0.35);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px 16px;
   display: flex; align-items: center; gap: 12px;
   animation: slideIn .25s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+.snack-item.highlight {
+  background: linear-gradient(135deg, rgba(245,200,66,0.12), rgba(245,200,66,0.04));
+  border-color: rgba(245,200,66,0.35);
 }
 .snack-item-rank {
   width: 28px; height: 28px; border-radius: 50%;
-  background: var(--gold); color: #1a1100;
+  background: var(--surface2); color: var(--text);
   font-size: 13px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
 }
+.snack-item.highlight .snack-item-rank { background: var(--gold); color: #1a1100; }
 .snack-item-info { flex: 1; }
 .snack-item-name { font-size: 15px; font-weight: 700; }
-.snack-item-id { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+.snack-item-id { font-size: 12px; color: var(--text-sub); margin-top: 1px; }
 .snack-item-count {
-  font-size: 22px; font-weight: 800; color: var(--gold);
+  font-size: 20px; font-weight: 800; color: var(--accent);
+  margin-right: 8px;
 }
+.snack-item.highlight .snack-item-count { color: var(--gold); }
+
+.snack-give-btn {
+  background: var(--accent); color: white; border: none;
+  padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+}
+.snack-give-btn:hover { transform: scale(1.05); }
+.snack-give-btn:active { transform: scale(0.95); }
+
+.received-badge {
+  background: var(--surface2); color: var(--text-sub);
+  padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700;
+}
+.received-badge span { color: var(--green); margin-right: 2px; }
 
 .all-stats-item {
   background: var(--surface2);

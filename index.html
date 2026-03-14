@@ -28,7 +28,9 @@
   <!-- 헤더 -->
   <header class="app-header">
     <div class="header-left">
-      <span class="school-badge">✝</span>
+      <span class="school-badge">
+        <div class="cross-icon"></div>
+      </span>
       <div>
         <div class="school-name">경성전자고등학교</div>
         <div class="event-name">예배 출석 체크</div>
@@ -44,19 +46,11 @@
     </div>
   </header>
 
-  <!-- 날짜 표시 -->
-  <div class="date-display" id="dateDisplay"></div>
-
-  <!-- 최근 출석자 리스트 -->
-  <div class="recent-list-wrapper">
-    <div class="section-label">오늘 출석한 학생</div>
-    <div id="recentList" class="recent-list">
-      <div class="empty-msg">아직 출석한 학생이 없습니다</div>
-    </div>
-  </div>
-
-  <!-- 입력 디스플레이 -->
+  <!-- 입력 영역 -->
   <div class="input-area">
+    <!-- 날짜 표시 (요일 포함) -->
+    <div class="date-display" id="dateDisplay"></div>
+    
     <div class="id-display" id="idDisplay">
       <span id="idText" class="id-placeholder">학번 입력</span>
     </div>
@@ -111,20 +105,22 @@
       </div>
       <div class="stat-card">
         <div class="stat-num" id="targetCount">-</div>
-        <div class="stat-label">목표 횟수</div>
+        <div class="stat-label">기준 횟수</div>
       </div>
     </div>
 
-    <!-- 간식 대상자 -->
-    <div class="section-label">🎉 간식 받을 학생 (누적 <span id="snackThresholdLabel">3</span>회 이상)</div>
-    <div id="snackList" class="snack-list">
-      <div class="loading-spinner-wrap"><div class="spinner"></div></div>
+    <!-- 필터 탭 -->
+    <div class="stats-tabs">
+      <button class="tab-btn active" data-tab="pending">간식 대기 (<span id="pendingCount">0</span>)</button>
+      <button class="tab-btn" data-tab="received">수령 완료 (<span id="receivedCount">0</span>)</button>
+      <button class="tab-btn" data-tab="all">전체 기록</button>
     </div>
 
-    <!-- 전체 기록 테이블 -->
-    <div class="section-label" style="margin-top:20px">전체 출석 기록</div>
-    <div id="allStatsList" class="all-stats-list">
-      <div class="loading-spinner-wrap"><div class="spinner"></div></div>
+    <!-- 간식 대상자 및 기록 목록 -->
+    <div id="statsListContainer">
+      <div id="snackList" class="snack-list">
+        <div class="loading-spinner-wrap"><div class="spinner"></div></div>
+      </div>
     </div>
   </div>
 </div>
