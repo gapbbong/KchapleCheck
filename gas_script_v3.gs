@@ -178,12 +178,8 @@ function recordSnack(id, name) {
 }
 
 /**
- * 오늘 날짜 문자열 반환 ($YYYY-MM-DD$)
+ * 오늘 날짜 문자열 반환 ($YYYY-MM-DD$ - 한국 시간대 기준)
  */
 function getTodayDateString() {
-  var now = new Date();
-  var y = now.getFullYear();
-  var m = String(now.getMonth() + 1).padStart(2, '0');
-  var d = String(now.getDate()).padStart(2, '0');
-  return y + "-" + m + "-" + d;
+  return Utilities.formatDate(new Date(), "GMT+9", "yyyy-MM-dd");
 }
