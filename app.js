@@ -311,19 +311,22 @@ async function submitAttendance() {
       showErrorBadge('⚠️ 서버 오류: ' + text);
       shakeDisplay();
     } else {
-      // 서버 응답 파싱 (이름|횟수)
+      // 서버 응답 파싱 (이름|횟수|상태)
       let name = text;
       let count = 0;
+      let isDuplicate = false;
+      
       if (text.includes('|')) {
         const parts = text.split('|');
         name = parts[0];
         count = parts[1];
+        if (parts[2] === 'ALREADY') isDuplicate = true;
       }
 
-      // 이미 오늘 로컬에 있는지 확인
+      // 서버에서 중복이라고 하거나, 로컬에 이미 있는 경우
       const alreadyLocal = todayRecords.find(r => r.id === studentId);
 
-      if (alreadyLocal) {
+      if (isDuplicate || alreadyLocal) {
         showDupBadge(`✅ ${name} (${count}회 출석)`);
         showOverlay('🔄', name, `이미 출석함 (누적 ${count}회)`);
       } else {

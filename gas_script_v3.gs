@@ -62,20 +62,14 @@ function handleAttendance(studentId) {
     sheet.getRange("A1:F1").setBackground("#eeeeee").setFontWeight("bold");
   }
   
-  // 중복 체크 (사용자 요청: 1117 학생 등이 같은 시트 내에서 여러 번 기록될 수 있으므로 중복 체크 완화)
-  // 대신 너무 짧은 시간(예: 1분) 내 중복은 방지
+  // 중복 체크: 오늘 이미 출석했는지 확인
   var data = sheet.getDataRange().getValues();
-  var now = new Date();
-  var canCheckIn = true;
-  
-  for (var j = data.length - 1; j >= 1; j--) {
-    if (String(data[j][0]) === String(studentId)) {
-      // 마지막 기록 시간 확인 (시간 컬럼: C)
-      var lastRecordTime = data[j][2]; // "HH:mm:ss"
-      // 간단하게 같은 학번이 시트에 있으면 "이미 기록됨" 메시지는 띄우되, 
-      // 사용자 경험을 위해 일단 시트에 추가 기록은 허용하거나 조건부로 처리
-      // 여기서는 "합쳐서 2회"를 위해 중복 기록을 허용하는 방향으로 수정
-      break;
+  for (var j = 1; j < data.length; j++) {
+    // 세 번째 컬럼(인덱스 2)에 학번이 있음 (F1 헤더 기준: 날짜, 시간, 학번, 이름, 학번+이름, 누적횟수)
+    // v1.4+ 기준 컬럼: [0]=날짜, [1]=시간, [2]=학번
+    if (String(data[j][2]) === String(studentId)) {
+      var count = calculateStudentAttendance(studentId); // 현재까지의 누적 횟수
+      return name + "|" + count + "|ALREADY"; // 이미 기록됨을 표시하거나 그냥 반환
     }
   }
   
