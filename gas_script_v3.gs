@@ -111,8 +111,8 @@ function calculateStudentAttendance(studentId) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(name)) {
       // 문자열 기반의 빠른 범위 비교
       if (name >= START_DATE_LIMIT_STR && name <= END_DATE_LIMIT_STR) {
-        // A열(학번)에서만 검색하여 매우 빠른 속도로 카운트
-        var finder = sh.getRange("A:A").createTextFinder(studentId).matchEntireCell(true);
+        // C열(학번)에서만 검색하여 매우 빠른 속도로 카운트 (과거 A열 검색 오류 수정)
+        var finder = sh.getRange("C:C").createTextFinder(studentId).matchEntireCell(true);
         var occurrences = finder.findAll();
         count += occurrences.length;
       }
@@ -136,10 +136,15 @@ function getAttendanceStats() {
       var d = new Date(name);
       if (d >= START_DATE_LIMIT && d <= END_DATE_LIMIT) {
         var data = sh.getDataRange().getValues();
-        for (var i = 1; i < data.length; i++) {
-          var id = String(data[i][0]);
-          var sName = data[i][1];
-          if (!stats[id]) stats[id] = { name: sName, count: 0, received: false };
+        // 첫 줄이 헤더인지 데이터인지 확인 (숫자가 포함되어 있으면 데이터로 간주하거나, 헤더가 "날짜"인지 확인)
+        var startRow = (data[0][0] === "날짜" || isNaN(data[0][0])) ? 1 : 0;
+        
+        for (var i = startRow; i < data.length; i++) {
+          // 학번은 항상 C열(index 2), 이름은 D열(index 3)
+          var id = String(data[i][2]);
+          var sName = data[i][3];
+          if (!id || id === "undefined") continue;
+          if (!stats[id]) stats[id] = { name: sName || "이름없음", count: 0, received: false };
           stats[id].count++;
         }
       }
