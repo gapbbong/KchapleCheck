@@ -8,7 +8,7 @@
 // ────────────────────────────────────
 const STORAGE_KEY  = 'chapel_settings';
 const RECORDS_KEY  = 'chapel_records';  // { 'YYYY-MM-DD': [{id, name, time}, ...] }
-const DEFAULT_GAS  = 'https://script.google.com/macros/s/AKfycbyTfqj9BTiNG4Erd1NvZBmsAeNnmezUwHCovhpY_a90ctV7JjUs6J2RO5LNWqSz6pw/exec';
+const DEFAULT_GAS  = 'https://script.google.com/macros/s/AKfycbzdgO6O8_w_r3sW-8TIAsuLMQI3flekzoBy1EHNTx9W-zObn36NOQDBIP-qhXIhnNZ0/exec';
 const DEFAULT_THRESHOLD = 3;
 
 let settings = {
@@ -74,7 +74,8 @@ function loadSettings() {
           parsed.gasUrl.includes('MTm') ||
           parsed.gasUrl.includes('ZZTa') ||
           parsed.gasUrl.includes('1JGJ') ||
-          parsed.gasUrl.includes('CRsi')
+          parsed.gasUrl.includes('CRsi') ||
+          parsed.gasUrl.includes('6pw')
       )) {
         parsed.gasUrl = DEFAULT_GAS;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
