@@ -126,32 +126,31 @@ function calculateStudentAttendance(studentId) {
  */
 function getAttendanceStats() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheets = ss.getSheets();
-  var stats = {}; // { id: { name: "", count: 0, received: false } }
+  var stats = {};      // 학생별: { id: { name, count, received } }
+  var dailyStats = {}; // 날짜별: { date: count }
   
-  // 1. 모든 출석 기록 스캔 (2026.03 ~ 2027.02)
-  sheets.forEach(function(sh) {
-    var name = sh.getName();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(name)) {
-      var d = new Date(name);
-      if (d >= START_DATE_LIMIT && d <= END_DATE_LIMIT) {
-        var data = sh.getDataRange().getValues();
-        // 첫 줄이 헤더인지 데이터인지 확인 (숫자가 포함되어 있으면 데이터로 간주하거나, 헤더가 "날짜"인지 확인)
-        var startRow = (data[0][0] === "날짜" || isNaN(data[0][0])) ? 1 : 0;
+  ss.getSheets().forEach(function(sh) {
+    var n = sh.getName();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(n) && n >= "2026-03-01" && n <= "2027-02-28") {
+      var data = sh.getDataRange().getValues();
+      var startRow = (data[0][0] === "날짜" || isNaN(data[0][0])) ? 1 : 0; // 헤더 자동 감지
+      
+      var dayCount = 0;
+      for (var i = startRow; i < data.length; i++) {
+        var id = String(data[i][2]);
+        if (!id || id === "undefined" || id.trim() === "") continue;
         
-        for (var i = startRow; i < data.length; i++) {
-          // 학번은 항상 C열(index 2), 이름은 D열(index 3)
-          var id = String(data[i][2]);
-          var sName = data[i][3];
-          if (!id || id === "undefined") continue;
-          if (!stats[id]) stats[id] = { name: sName || "이름없음", count: 0, received: false };
-          stats[id].count++;
-        }
+        // 학생별 통계
+        if (!stats[id]) stats[id] = { name: data[i][3] || "이름없음", count: 0, received: false };
+        stats[id].count++;
+        dayCount++;
       }
+      // 날짜별 통계 저장
+      if (dayCount > 0) dailyStats[n] = dayCount;
     }
   });
-  
-  // 2. 간식 지급 정보 스캔
+
+  // 간식 지급 정보 스캔
   var snackSheet = ss.getSheetByName("간식지급");
   if (snackSheet) {
     var snackData = snackSheet.getDataRange().getValues();
@@ -161,7 +160,10 @@ function getAttendanceStats() {
     }
   }
   
-  return stats;
+  return {
+    studentStats: stats,
+    dailyStats: dailyStats
+  };
 }
 
 /**

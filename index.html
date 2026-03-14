@@ -44,7 +44,7 @@
         <button class="icon-btn" id="settingsBtn" title="설정">
           <span class="material-icons-round">settings</span>
         </button>
-        <div class="app-version">v2.1</div>
+        <div class="app-version">v2.2</div>
       </div>
     </div>
   </header>
@@ -95,9 +95,26 @@
     </button>
   </header>
 
-  <div class="stats-content">
-    <!-- 요약 카드 -->
-    <div class="stats-summary-row">
+    <div class="stats-content">
+      <!-- 예배 참석자 수 버튼 추가 -->
+      <div class="stats-action-bar">
+        <button class="action-btn" id="showDailyStats">
+          <span class="material-icons-round">calendar_month</span>
+          날짜별 참석자 수
+        </button>
+      </div>
+
+      <!-- 날짜별 통계 목록 (평상시 숨김) -->
+      <div id="dailyStatsPanel" class="daily-stats-panel hidden">
+        <div class="daily-stats-header">
+          <span>날짜</span>
+          <span>인원</span>
+        </div>
+        <div id="dailyStatsList" class="daily-stats-list"></div>
+      </div>
+
+      <!-- 요약 카드 -->
+      <div class="stats-summary-row">
       <div class="stat-card">
         <div class="stat-num" id="totalToday">-</div>
         <div class="stat-label">오늘 출석</div>

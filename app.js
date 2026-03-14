@@ -173,6 +173,12 @@ function bindEvents() {
   document.getElementById('settingsBack').addEventListener('click',() => showScreen('main'));
   document.getElementById('refreshStats').addEventListener('click', fetchServerStats);
 
+  // 날짜별 통계 버튼
+  const dailyBtn = document.getElementById('showDailyStats');
+  if (dailyBtn) {
+    dailyBtn.addEventListener('click', toggleDailyStats);
+  }
+
   // 통계 탭 전환
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -235,7 +241,12 @@ async function fetchServerStats() {
   try {
     const url = `${settings.gasUrl}?action=getStats`;
     const resp = await fetch(url);
-    serverStats = await resp.json();
+    const data = await resp.json();
+    
+    // serverStats와 dailyStatsData 분리 저장 (핵심 수정)
+    serverStats = data.studentStats || {};
+    dailyStatsData = data.dailyStats || {};
+    
     renderStatsScreen();
   } catch (err) {
     console.error('서버 통계 로드 실패:', err);
@@ -337,7 +348,7 @@ async function submitAttendance() {
 
       if (isDuplicate || alreadyLocal) {
         showDupBadge(`✅ ${name} (${count}회 출석)`);
-        showOverlay('🔄', name, `이미 출석함 (누적 ${count}회)`);
+        showOverlay('✅', name, `현재 누적 ${count}회`);
       } else {
         // 신규 출석
         const now = new Date();
@@ -451,6 +462,11 @@ function renderStatsScreen() {
   // 1. 기본 정보 업데이트
   document.getElementById('totalToday').textContent = todayRecords.length;
   document.getElementById('targetCount').textContent = settings.threshold;
+
+  // dailyStatsPanel이 열려있다면 갱신
+  if (!document.getElementById('dailyStatsPanel').classList.contains('hidden')) {
+    renderDailyStatsList();
+  }
 
   const list = Object.entries(serverStats).map(([id, v]) => ({
     id, name: v.name, count: v.count, received: v.received
