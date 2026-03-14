@@ -89,6 +89,9 @@ function handleAttendance(studentId) {
   return name + "|" + count;
 }
 
+var START_DATE_LIMIT_STR = "2026-03-01";
+var END_DATE_LIMIT_STR = "2027-02-28";
+
 /**
  * 특정 학생의 누적 출석 횟수 계산 (TextFinder를 사용한 고속 조회)
  */
@@ -99,9 +102,10 @@ function calculateStudentAttendance(studentId) {
   
   sheets.forEach(function(sh) {
     var name = sh.getName();
+    // 날짜 형식(yyyy-MM-dd) 시트인지 확인
     if (/^\d{4}-\d{2}-\d{2}$/.test(name)) {
-      var d = new Date(name);
-      if (d >= START_DATE_LIMIT && d <= END_DATE_LIMIT) {
+      // 문자열 기반의 빠른 범위 비교
+      if (name >= START_DATE_LIMIT_STR && name <= END_DATE_LIMIT_STR) {
         // A열(학번)에서만 검색하여 매우 빠른 속도로 카운트
         var finder = sh.getRange("A:A").createTextFinder(studentId).matchEntireCell(true);
         var occurrences = finder.findAll();
