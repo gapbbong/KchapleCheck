@@ -1,6 +1,6 @@
 {
   "name": "kchaple-check",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "경성전자고 예배 출석 체크 웹앱",
   "scripts": {
     "start": "npx serve . -p 3000 --no-clipboard",
