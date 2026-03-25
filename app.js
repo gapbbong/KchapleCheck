@@ -1,6 +1,6 @@
 /**
  * ✝ 경성전자고 예배 출석 체크 앱
- * app.js — 메인 로직
+ * app.js — 메인 로직 (Supabase Migration)
  */
 
 // ────────────────────────────────────
@@ -8,11 +8,12 @@
 // ────────────────────────────────────
 const STORAGE_KEY  = 'chapel_settings';
 const RECORDS_KEY  = 'chapel_records';  // { 'YYYY-MM-DD': [{id, name, time}, ...] }
-const DEFAULT_GAS  = 'https://script.google.com/macros/s/AKfycbzdgO6O8_w_r3sW-8TIAsuLMQI3flekzoBy1EHNTx9W-zObn36NOQDBIP-qhXIhnNZ0/exec';
 const DEFAULT_THRESHOLD = 3;
 
+// Supabase Client Initialization
+const supabaseClient = window.supabase ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY) : null;
+
 let settings = {
-  gasUrl:    DEFAULT_GAS,
   threshold: DEFAULT_THRESHOLD
 };
 
@@ -44,7 +45,6 @@ const statsScreen    = document.getElementById('statsScreen');
 const settingsScreen = document.getElementById('settingsScreen');
 
 // 설정 요소
-const gasUrlInput      = document.getElementById('gasUrl');
 const thresholdValEl   = document.getElementById('thresholdVal');
 
 // ────────────────────────────────────
@@ -63,32 +63,11 @@ function loadSettings() {
   if (saved) {
     try { 
       const parsed = JSON.parse(saved);
-      // [마이그레이션] 이전 연습용/구버전 URL이 저장되어 있다면 최신 버전으로 강제 업데이트
-      if (parsed.gasUrl && (
-          parsed.gasUrl.includes('feNN3-B') || 
-          parsed.gasUrl.includes('a4Hhx') || 
-          parsed.gasUrl.includes('Gu4ctq') ||
-          parsed.gasUrl.includes('Hhx') ||
-          parsed.gasUrl.includes('5x29') ||
-          parsed.gasUrl.includes('2x-') ||
-          parsed.gasUrl.includes('L8w') ||
-          parsed.gasUrl.includes('MTm') ||
-          parsed.gasUrl.includes('ZZTa') ||
-          parsed.gasUrl.includes('1JGJ') ||
-          parsed.gasUrl.includes('CRsi') ||
-          parsed.gasUrl.includes('6pw')
-      )) {
-        parsed.gasUrl = DEFAULT_GAS;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-      }
       settings = { ...settings, ...parsed }; 
     } catch {
       settings = { ...settings };
     }
   }
-  // 저장된 URL이 없거나 마이그레이션 후에도 비어있으면 기본값 사용
-  if (!settings.gasUrl) settings.gasUrl = DEFAULT_GAS;
-  gasUrlInput.value          = settings.gasUrl;
   thresholdValEl.textContent = settings.threshold;
 }
 
@@ -193,14 +172,6 @@ function bindEvents() {
 
   // 설정 저장
   document.getElementById('saveSettings').addEventListener('click', () => {
-    let url = gasUrlInput.value.trim();
-    if (!url) { 
-      // 비우고 저장하면 기본값으로 복구
-      url = DEFAULT_GAS;
-      gasUrlInput.value = url;
-      showToast('기본 주소로 복구되었습니다');
-    }
-    settings.gasUrl = url;
     saveSettingsToStorage();
     showToast('설정이 저장되었습니다 ✅');
   });
@@ -262,23 +233,54 @@ function renderDailyStatsList() {
 
 
 // ────────────────────────────────────
-// 서버 데이터 통신
+// 서버 데이터 통신 (Supabase)
 // ────────────────────────────────────
 async function fetchServerStats() {
-  if (!settings.gasUrl) return;
+  if (!supabaseClient) return;
   
   const snackListEl = document.getElementById('snackList');
   snackListEl.innerHTML = '<div class="loading-spinner-wrap"><div class="spinner"></div></div>';
 
   try {
-    const url = `${settings.gasUrl}?action=getStats`;
-    const resp = await fetch(url);
-    const data = await resp.json();
+    // 1. Fetch all students
+    const { data: students, error: studentsErr } = await supabaseClient.from('kchaple_students').select('*');
+    if (studentsErr) throw studentsErr;
+
+    // 2. Fetch attendance grouped by student, and daily stats
+    const { data: attendance, error: attErr } = await supabaseClient.from('kchaple_attendance').select('*');
+    if (attErr) throw attErr;
+
+    // 3. Fetch snacks
+    const { data: snacks, error: snacksErr } = await supabaseClient.from('kchaple_snacks').select('student_id');
+    if (snacksErr) throw snacksErr;
+
+    // Process dailyStatsData { 'YYYY-MM-DD': count }
+    dailyStatsData = {};
+    attendance.forEach(a => {
+      const d = a.date;
+      dailyStatsData[d] = (dailyStatsData[d] || 0) + 1;
+    });
+
+    // Process serverStats { id: { name, count, received } }
+    serverStats = {};
+    students.forEach(s => {
+      serverStats[s.id] = { name: s.name, count: 0, received: false };
+    });
     
-    // serverStats와 dailyStatsData 분리 저장 (핵심 수정)
-    serverStats = data.studentStats || {};
-    dailyStatsData = data.dailyStats || {};
-    
+    // Fallback for missing students
+    attendance.forEach(a => {
+      if (!serverStats[a.student_id]) {
+        serverStats[a.student_id] = { name: '이름없음', count: 0, received: false };
+      }
+      serverStats[a.student_id].count++;
+    });
+
+    snacks.forEach(s => {
+      if (serverStats[s.student_id]) {
+        serverStats[s.student_id].received = true;
+      }
+    });
+
     renderStatsScreen();
   } catch (err) {
     console.error('서버 통계 로드 실패:', err);
@@ -293,10 +295,20 @@ async function markSnackAsReceived(id, name) {
   showOverlay('🍬', '지급 중...', `${name} 학생 기록 중`);
 
   try {
-    const url = `${settings.gasUrl}?action=giveSnack&id=${id}&name=${encodeURIComponent(name)}`;
-    await fetch(url);
-    showOverlay('🎁', '지급 완료', `${name} 학생 간식 지급 기록됨`);
-    fetchServerStats(); // 통계 새로고침
+    const { error } = await supabaseClient
+      .from('kchaple_snacks')
+      .insert([{ student_id: id }]);
+
+    if (error) {
+      if (error.code === '23505') { // Unique violation
+        showToast('❌ 이미 지급된 학생입니다');
+      } else {
+        throw error;
+      }
+    } else {
+      showOverlay('🎁', '지급 완료', `${name} 학생 간식 지급 기록됨`);
+      fetchServerStats(); // 통계 새로고침
+    }
   } catch (err) {
     console.error('간식 지급 기록 실패:', err);
     showToast('❌ 기록 실패');
@@ -321,13 +333,13 @@ function updateDisplay() {
 }
 
 // ────────────────────────────────────
-// 출석 제출
+// 출석 제출 (Supabase)
 // ────────────────────────────────────
 async function submitAttendance() {
   if (isSubmitting || currentInput.length === 0) return;
 
-  if (!settings.gasUrl) {
-    showErrorBadge('⚙️ 설정에서 GAS URL을 먼저 입력하세요');
+  if (!supabaseClient || CONFIG.SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+    showErrorBadge('⚙️ config.js에서 Supabase URL과 KEY를 설정하세요');
     shakeDisplay();
     return;
   }
@@ -340,64 +352,69 @@ async function submitAttendance() {
   const studentId = currentInput;
 
   try {
-    const url = `${settings.gasUrl}?id=${encodeURIComponent(studentId)}`;
-    console.log('[DEBUG] 요청 시작:', url);
-    
-    // GAS 통신 최적화 옵션 추가
-    const resp = await fetch(url, {
-      method: 'GET',
-      mode: 'cors',
-      cache: 'no-cache',
-      redirect: 'follow'
-    });
-    const text = (await resp.text()).trim();
-    console.log('[DEBUG] 서버 응답:', text);
+    // 1. Check if student exists
+    const { data: student, error: studentErr } = await supabaseClient
+      .from('kchaple_students')
+      .select('name')
+      .eq('id', studentId)
+      .maybeSingle();
 
-    if (text === 'NOT_FOUND') {
-      console.warn(`[DEBUG] 학번(${studentId})을 명단에서 찾을 수 없습니다.`);
+    if (studentErr || !student) {
       showErrorBadge('❌ 등록되지 않은 학번입니다');
       shakeDisplay();
       showOverlay('❌', '학번 없음', `${studentId}는 명단에 없습니다`);
-    } else if (text.startsWith('ERROR')) {
-      console.error('[DEBUG] GAS 실행 오류:', text);
-      showErrorBadge('⚠️ 서버 오류: ' + text);
-      shakeDisplay();
+      return;
+    }
+    
+    const name = student.name;
+    const dateStr = getTodayKey();
+
+    // 2. Check duplicate today
+    const { data: existing, error: existErr } = await supabaseClient
+      .from('kchaple_attendance')
+      .select('id')
+      .eq('student_id', studentId)
+      .eq('date', dateStr)
+      .maybeSingle();
+
+    if (existing) {
+      // Get count
+      const { count } = await supabaseClient
+        .from('kchaple_attendance')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', studentId);
+        
+      showDupBadge(`✅ ${name} (${count || 1}회 출석)`);
+      showOverlay('✅', name, `현재 누적 ${count || 1}회 (이미 출석함)`);
     } else {
-      // 서버 응답 파싱 (이름|횟수|상태)
-      let name = text;
-      let count = 0;
-      let isDuplicate = false;
-      
-      if (text.includes('|')) {
-        const parts = text.split('|');
-        name = parts[0];
-        count = parts[1];
-        if (parts[2] === 'ALREADY') isDuplicate = true;
-      }
+      // Insert new attendance
+      const { error: insertErr } = await supabaseClient
+        .from('kchaple_attendance')
+        .insert([{ student_id: studentId, date: dateStr }]);
+        
+      if (insertErr) throw insertErr;
 
-      // 서버에서 중복이라고 하거나, 로컬에 이미 있는 경우
-      const alreadyLocal = todayRecords.find(r => r.id === studentId);
+      // Get updated count
+      const { count } = await supabaseClient
+        .from('kchaple_attendance')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', studentId);
 
-      if (isDuplicate || alreadyLocal) {
-        showDupBadge(`✅ ${name} (${count}회 출석)`);
-        showOverlay('✅', name, `현재 누적 ${count}회`);
-      } else {
-        // 신규 출석
-        const now = new Date();
-        const timeStr = now.toTimeString().slice(0, 8);
-        const record  = { id: studentId, name, time: timeStr };
+      // Local state update
+      const now = new Date();
+      const timeStr = now.toTimeString().slice(0, 8);
+      const record  = { id: studentId, name, time: timeStr };
 
-        todayRecords.push(record);
-        const key = getTodayKey();
-        allRecords[key] = todayRecords;
-        saveAllRecords();
+      todayRecords.push(record);
+      const key = getTodayKey();
+      allRecords[key] = todayRecords;
+      saveAllRecords();
 
-        showSuccessBadge(`🎉 ${name} (${count}회 출석)`);
-        showOverlay('🙌', name, `${studentId} · 출석 완료 (누적 ${count}회)`);
-      }
+      showSuccessBadge(`🎉 ${name} (${count || 1}회 출석)`);
+      showOverlay('🙌', name, `${studentId} · 출석 완료 (누적 ${count || 1}회)`);
     }
   } catch (err) {
-    showErrorBadge('🌐 네트워크 오류 - 인터넷 연결 확인');
+    showErrorBadge('🌐 네트워크 오류 - 인터넷 접속이나 DB를 확인하세요');
     shakeDisplay();
     console.error(err);
   } finally {

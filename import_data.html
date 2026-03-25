@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Supabase 데이터 마이그레이션 도구</title>
+  <style>
+    body { font-family: 'Pretendard', sans-serif; padding: 40px; background: #f4f6f8; max-width: 800px; margin: 0 auto; line-height: 1.6; }
+    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    h1 { margin-top: 0; color: #1e293b; }
+    p { color: #475569; }
+    .btn { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
+    .btn:hover { background: #2563eb; }
+    .btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .log-area { margin-top: 20px; background: #1e293b; color: #10b981; padding: 15px; font-family: monospace; height: 300px; overflow-y: auto; border-radius: 6px; }
+    .error { color: #ef4444; }
+    .warn { color: #f59e0b; }
+    .file-input { margin: 20px 0; padding: 10px; border: 2px dashed #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+
+<div class="card">
+  <h1>🚀 구글 시트 -> Supabase 데이터 이전 도구</h1>
+  <p>1. 구글 스프레드시트 화면에서 <b>[파일] > [다운로드] > [Microsoft Excel (.xlsx)]</b> 을 클릭하여 파일을 다운로드하세요.<br>
+     2. 로컬 터미널 화면(또는 .env)에 있는 <b>SERVICE_ROLE_KEY</b>를 아래에 붙여넣어 보안 규칙(RLS)을 임시 패스하세요.<br>
+     3. 엑셀 파일을 선택한 후 <b>데이터 이전 시작</b> 버튼을 누르시면 됩니다.</p>
+
+  <input type="password" id="serviceKey" class="file-input" placeholder="여기에 SERVICE_ROLE_KEY (eyJ...) 를 붙여넣으세요" style="margin-bottom: 5px;">
+  <input type="file" id="excelFile" class="file-input" accept=".xlsx, .xls">
+  
+  <button id="importBtn" class="btn" disabled>데이터 이전 시작 ⚡</button>
+
+  <div class="log-area" id="logArea">
+    대기 중...
+  </div>
+</div>
+
+<script>
+  const fileInput = document.getElementById('excelFile');
+  const importBtn = document.getElementById('importBtn');
+  const logArea = document.getElementById('logArea');
+  const serviceKeyInput = document.getElementById('serviceKey');
+  let selectedFile = null;
+
+  fileInput.addEventListener('change', (e) => {
+    selectedFile = e.target.files[0];
+    if (selectedFile) importBtn.disabled = false;
+  });
+
+  function log(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.textContent = `> ${msg}`;
+    if (type === 'error') el.className = 'error';
+    if (type === 'warn') el.className = 'warn';
+    logArea.appendChild(el);
+    logArea.scrollTop = logArea.scrollHeight;
+  }
+
+  importBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    
+    // Supabase 설정 확인
+    if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+      log('config.js에 Supabase URL이 올바르지 않습니다!', 'error');
+      return;
+    }
+    
+    const sRoleKey = serviceKeyInput.value.trim();
+    // 서비스 롤 키가 없으면 기본값인 ANON_KEY 사용
+    const finalKey = sRoleKey ? sRoleKey : CONFIG.SUPABASE_ANON_KEY;
+    const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, finalKey);
+    
+    importBtn.disabled = true;
+    log('엑셀 파일 읽는 중...', 'info');
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        log(`시트 ${workbook.SheetNames.length}개 발견. 처리를 시작합니다.`, 'info');
+
+        // 처리 카운터
+        let successCount = { students: 0, attendance: 0, snacks: 0 };
+
+        // 1. 명단(students) 처리 (가장 먼저 해야 참조를 만족함)
+        if (workbook.SheetNames.includes('명단')) {
+          const sheet = workbook.Sheets['명단'];
+          const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
+          log(`[명단] 시트 처리 중... (총 ${rows.length-1}행)`);
+          
+          for (let i = 1; i < rows.length; i++) {
+            let id = String(rows[i][0] || '').trim();
+            let name = String(rows[i][1] || '').trim();
+            if (id) {
+              const { error } = await supabase.from('kchaple_students').upsert({ id, name });
+              if (error) log(`학번 ${id} 추가 오류: ${error.message}`, 'error');
+              else successCount.students++;
+            }
+          }
+          log(`✅ [명단] ${successCount.students}명 학생 데이터 삽입 완료.`);
+        } else {
+          log(`'명단' 시트를 찾을 수 없습니다. (테이블 제약 조건 때문에 출석 기록 삽입이 실패할 수 있습니다)`, 'warn');
+        }
+
+        // 2. 다른 시트들 처리 (날짜, 간식지급 등)
+        for (const sheetName of workbook.SheetNames) {
+          const sheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
+
+          if (sheetName === '간식지급') {
+            log(`[간식지급] 시트 처리 중...`);
+            for (let i = 1; i < rows.length; i++) {
+              let id = String(rows[i][0] || '').trim();
+              if (id) {
+                const { error } = await supabase.from('kchaple_snacks').upsert({ student_id: id });
+                if (error && error.code !== '23505') log(`간식(학번 ${id}) 오류: ${error.message}`, 'error');
+                else successCount.snacks++;
+              }
+            }
+            log(`✅ [간식지급] 기록 삽입 완료.`);
+            
+          } else if (/^\d{4}-\d{2}-\d{2}$/.test(sheetName)) {
+            // 날짜 기반 출석 시트
+            log(`[${sheetName}] 출석 시트 복사 중...`);
+            for (let i = 1; i < rows.length; i++) {
+              let id = String(rows[i][2] || '').trim(); // C열(학번)
+              if (id && id !== 'undefined' && id !== 'null') {
+                const { error } = await supabase.from('kchaple_attendance').upsert(
+                  { student_id: id, date: sheetName }, 
+                  { onConflict: 'student_id, date' }
+                );
+                if (error) {
+                    if (error.code === '23503') { // Foreign Key Violation
+                        // "명단" 시트에는 없지만 과거 출석 시트에 있는 학번인 경우 강제 생성
+                        await supabase.from('kchaple_students').upsert({ id: id, name: '누락자/과거기록' });
+                        // 재시도
+                        await supabase.from('kchaple_attendance').upsert({ student_id: id, date: sheetName });
+                        successCount.attendance++;
+                    } else if (error.code !== '23505') {
+                        log(`출석(${sheetName}, 학번 ${id}) 오류: ${error.message} (아마 명단에 없는 번호일 수 있습니다)`, 'warn');
+                    }
+                } else {
+                    successCount.attendance++;
+                }
+              }
+            }
+          }
+        }
+        
+        log('🎉 통합 마이그레이션이 완료되었습니다!', 'info');
+        log(`총 합산 -> 학생: ${successCount.students}명, 출석 기록: ${successCount.attendance}건, 기지급 처리: ${successCount.snacks}건 완료.`);
+        
+      } catch (err) {
+        log(`오류 발생: ${err.message}`, 'error');
+      }
+      importBtn.disabled = false;
+    };
+    reader.readAsArrayBuffer(selectedFile);
+  });
+</script>
+</body>
+</html>
