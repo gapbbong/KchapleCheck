@@ -28,6 +28,7 @@ let isSubmitting = false;
 let currentTab   = 'pending'; // 'pending', 'received', 'all'
 let serverStats  = {};        // { id: { name, count, received } }
 let dailyStatsData = {};      // 서버에서 받아온 날짜별 통계 보관 (v2.2 추가)
+let allAttendanceRaw = [];    // 전체 출석 로우 데이터 (상세 조회용)
 
 // ────────────────────────────────────
 // DOM 요소
@@ -152,7 +153,7 @@ function bindEvents() {
   });
 
   // 화면 전환
-  document.getElementById('statsBtn').addEventListener('click',    () => showScreen('stats'));
+  document.getElementById('statsBtn').addEventListener('click',    () => { showScreen('stats'); fetchServerStats(); });
   document.getElementById('settingsBtn').addEventListener('click', () => showScreen('settings'));
   document.getElementById('statsBack').addEventListener('click',   () => showScreen('main'));
   document.getElementById('settingsBack').addEventListener('click',() => showScreen('main'));
@@ -228,11 +229,144 @@ function renderDailyStatsList() {
   }
   
   listEl.innerHTML = dates.map(date => `
-    <div class="daily-item">
+    <div class="daily-item" onclick="showDailyDetail('${date}')">
       <span>${date}</span>
-      <span class="count">${dailyStatsData[date]}명</span>
+      <span class="count">${dailyStatsData[date]}명 <span class="material-icons-round" style="font-size:14px;vertical-align:middle">chevron_right</span></span>
     </div>
   `).join('');
+}
+
+function showDailyDetail(date) {
+  const filtered = allAttendanceRaw.filter(a => a.date === date);
+  const students = filtered.map(a => {
+    const s = serverStats[a.student_id] || { name: '이름없음', count: 0 };
+    return { id: a.student_id, name: s.name, count: s.count };
+  }).sort((a, b) => a.id.localeCompare(b.id));
+
+  // 통계 계산
+  const gradeStats = { 1: 0, 2: 0, 3: 0 };
+  const classStats = {}; // "1-1", "1-2" 등
+  const freqStats  = {}; // "5회", "4회" 등
+
+  students.forEach(s => {
+    // 학년/반 파싱 (학번 규칙: 1101 -> 1학년 1반, 10101 -> 1학년 01반)
+    const grade = s.id[0];
+    let clsNum = '';
+    if (s.id.length === 4) {
+      clsNum = s.id[1];
+    } else {
+      clsNum = s.id.slice(1, 3);
+    }
+    const clsKey = `${grade}-${parseInt(clsNum)}`;
+
+    if (gradeStats[grade] !== undefined) gradeStats[grade]++;
+    classStats[clsKey] = (classStats[clsKey] || 0) + 1;
+    
+    const fKey = `${s.count}회`;
+    freqStats[fKey] = (freqStats[fKey] || 0) + 1;
+  });
+
+  // UI 생성
+  let html = `
+    <div class="detail-view-container">
+      <div class="detail-header">
+        <button class="detail-close" onclick="closeOverlay()">
+          <span class="material-icons-round">close</span>
+        </button>
+        <div class="detail-date">${date} 상세 통계</div>
+      </div>
+      
+      <div class="detail-body">
+        <div class="detail-section">
+          <div class="detail-section-title">🎓 학년별 인원</div>
+          <div class="detail-grid">
+            <div class="grid-item"><span>1학년</span><strong>${gradeStats[1]}명</strong></div>
+            <div class="grid-item"><span>2학년</span><strong>${gradeStats[2]}명</strong></div>
+            <div class="grid-item"><span>3학년</span><strong>${gradeStats[3]}명</strong></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">📊 누적 참여도 (올해 총 횟수)</div>
+          <div class="detail-flex-wrap">
+            ${Object.keys(freqStats).sort((a,b) => parseInt(b)-parseInt(a)).map(f => `
+              <div class="flex-item"><span>${f}</span><strong>${freqStats[f]}명</strong></div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">🏫 반별 인원 (참석자 기준)</div>
+          <div class="detail-grid-small">
+            ${Array.from({length:3}, (_,i) => i+1).map(g => 
+              Array.from({length:6}, (_,i) => i+1).map(c => {
+                const key = `${g}-${c}`;
+                return `<div class="grid-item-s ${classStats[key] ? 'active' : ''}">
+                  <span class="label">${g}-${c}</span>
+                  <span class="val">${classStats[key] || 0}</span>
+                </div>`;
+              }).join('')
+            ).join('')}
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">📝 전체 명단 (${students.length}명)</div>
+          <div class="detail-student-list">
+            ${students.map(s => `
+              <div class="student-row">
+                <span class="s-id">${s.id}</span>
+                <span class="s-name">${s.name}</span>
+                <span class="s-count">${s.count}회</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  overlayIcon.innerHTML = ''; // 아이콘 제거
+  overlayIcon.style.display = 'none';
+  overlayName.style.display = 'none';
+  overlaySub.style.display = 'none';
+  
+  // 기존 카드 대신 새로운 컨테이너 주입
+  overlayCard.innerHTML = html;
+  overlayCard.style.padding = '0';
+  overlayCard.style.width = '90%';
+  overlayCard.style.maxWidth = '440px';
+  overlayCard.style.maxHeight = '85vh';
+  overlayCard.style.overflow = 'hidden';
+  overlayCard.style.display = 'flex';
+  overlayCard.style.flexDirection = 'column';
+
+  overlay.classList.add('show');
+  overlay.classList.remove('hidden');
+}
+
+// 오버레이 닫을 때 카드 복구 로직 추가 필요 (기존 출석 체크 오버레이와 호환)
+function closeOverlay() {
+  overlay.classList.add('hidden');
+  overlay.classList.remove('show');
+  
+  // 카드 스타일 초기화 (다음 출석 체크 팝업을 위해)
+  setTimeout(() => {
+    overlayCard.style = '';
+    overlayIcon.style.display = 'block';
+    overlayName.style.display = 'block';
+    overlaySub.style.display = 'block';
+    overlayIcon.innerHTML = ''; 
+    overlayCard.innerHTML = `
+      <div id="overlayIcon" class="overlay-icon"></div>
+      <div id="overlayName" class="overlay-name"></div>
+      <div id="overlaySub" class="overlay-sub"></div>
+    `;
+    // DOM 다시 찾기 (innerHTML로 날아갔으므로)
+    window.overlayIcon = document.getElementById('overlayIcon');
+    window.overlayName = document.getElementById('overlayName');
+    window.overlaySub  = document.getElementById('overlaySub');
+  }, 300);
 }
 
 
@@ -257,6 +391,8 @@ async function fetchServerStats() {
       .gte('date', START_DATE_LIMIT)
       .lte('date', END_DATE_LIMIT);
     if (attErr) throw attErr;
+
+    allAttendanceRaw = attendance; // 전역 저장
 
     // 3. Fetch snacks
     const { data: snacks, error: snacksErr } = await supabaseClient.from('kchaple_snacks').select('student_id');
