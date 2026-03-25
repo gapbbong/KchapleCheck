@@ -585,7 +585,8 @@ html, body {
 .detail-view-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   background: white;
 }
 .detail-header {
@@ -605,6 +606,7 @@ html, body {
 .detail-body {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
   padding: 20px;
   display: flex;
   flex-direction: column;
