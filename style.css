@@ -118,6 +118,11 @@ html, body {
   outline: none;
   text-align: center;
 }
+.mentor-main-input::placeholder {
+  font-size: 18px;
+  font-weight: 600;
+  color: #94a3b8;
+}
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
