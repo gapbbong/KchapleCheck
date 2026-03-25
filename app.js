@@ -147,6 +147,9 @@ function bindEvents() {
 
   // 키보드 지원
   document.addEventListener('keydown', e => {
+    // 입력 칸에 포커스가 있으면 무시 (v3.3)
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
     if (e.key >= '0' && e.key <= '9' && currentInput.length < 8) {
       currentInput += e.key;
       updateDisplay();
