@@ -225,22 +225,14 @@ function bindEvents() {
       const mentorBox = document.getElementById('mentorInputMainBox');
       if (currentMode === '1on1') {
         mentorBox.classList.remove('hidden');
-        showToast('🏃 1:1 제자훈련 모드로 전환됨');
       } else {
         mentorBox.classList.add('hidden');
-        showToast('⛪ 일반 예배 출석 모드로 전환됨');
       }
 
       // 모드 변경 시 UI 초기화
       currentInput = '';
       updateDisplay();
       clearResultBadge();
-      
-      if (currentMode === '1on1') {
-        showToast('🏃 1:1 제자훈련 모드로 전환됨');
-      } else {
-        showToast('⛪ 일반 예배 출석 모드로 전환됨');
-      }
     });
   });
 
@@ -613,7 +605,7 @@ async function submitAttendance() {
       const mentorMainInput = document.getElementById('mentorNameMain').value.trim();
       let mentorName = mentorMainInput || (assign ? assign.mentor_name : null);
 
-      // 멘토가 없으면 물어보기
+      // 멘토가 없으면 강제 중단 (v2.8 수정)
       if (!mentorName) {
         showToast('❌ 양육자 성함을 먼저 입력해 주세요.');
         isSubmitting = false; setSubmitLoading(false); return;
