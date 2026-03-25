@@ -262,19 +262,8 @@ function bindEvents() {
 }
 
 function renderMentorList() {
-  const list = document.getElementById('mentorList');
-  if (settings.mentors.length === 0) {
-    list.innerHTML = '<div class="empty-msg">등록된 담당자가 없습니다</div>';
-    return;
-  }
-  list.innerHTML = settings.mentors.map(m => `
-    <div class="mentor-item">
-      <span>${m}</span>
-      <span class="material-icons-round del-btn" onclick="deleteMentor('${m}')">delete</span>
-    </div>
-  `).join('');
+  // 제어권이 메인 화면으로 이동함에 따라 빈 함수로 둠 (v2.8)
 }
-
 function deleteMentor(name) {
   if (confirm(`${name} 담당자를 삭제할까요?`)) {
     settings.mentors = settings.mentors.filter(m => m !== name);
@@ -298,18 +287,29 @@ function toggleDailyStats() {
 function renderDailyStatsList() {
   const listEl = document.getElementById('dailyStatsList');
   const dates = Object.keys(dailyStatsData).sort().reverse();
-  
+
   if (dates.length === 0) {
     listEl.innerHTML = '<div class="empty-msg">데이터가 없습니다</div>';
     return;
   }
   
-  listEl.innerHTML = dates.map(date => `
-    <div class="daily-item" onclick="showDailyDetail('${date}')">
-      <span>${date}</span>
-      <span class="count">${dailyStatsData[date]}명 <span class="material-icons-round" style="font-size:14px;vertical-align:middle">chevron_right</span></span>
-    </div>
-  `).join('');
+  listEl.innerHTML = '';
+  dates.forEach(date => {
+    const d = dailyStatsData[date];
+    const item = document.createElement('div');
+    item.className = 'daily-item';
+    item.style.cursor = 'pointer';
+    item.onclick = () => showDailyDetail(date);
+    
+    // 제자훈련 인원 표시 (v2.8)
+    const dText = d.discipleship > 0 ? ` <span style="font-size:12px; color:var(--text-sub); margin-left:8px;">(제자: ${d.discipleship}명)</span>` : '';
+    
+    item.innerHTML = `
+      <span>${date} ${dText}</span>
+      <span class="count">${d.chapel}명 <span class="material-icons-round" style="font-size:14px;vertical-align:middle">chevron_right</span></span>
+    `;
+    listEl.appendChild(item);
+  });
 }
 
 function showDailyDetail(date) {
@@ -460,7 +460,7 @@ async function fetchServerStats() {
     const { data: students, error: studentsErr } = await supabaseClient.from('kchaple_students').select('*');
     if (studentsErr) throw studentsErr;
 
-    // 2. Fetch attendance grouped by student, and daily stats (Filter by current academic year)
+    // 2. Fetch attendance and daily stats (Filter by current academic year)
     const { data: attendance, error: attErr } = await supabaseClient
       .from('kchaple_attendance')
       .select('*')
@@ -468,17 +468,30 @@ async function fetchServerStats() {
       .lte('date', END_DATE_LIMIT);
     if (attErr) throw attErr;
 
+    const { data: discipleship, error: dErr } = await supabaseClient
+      .from('kchaple_discipleship_logs')
+      .select('date')
+      .gte('date', START_DATE_LIMIT)
+      .lte('date', END_DATE_LIMIT);
+    if (dErr) console.error('제자훈련 로그 로드 실패:', dErr);
+
     allAttendanceRaw = attendance; // 전역 저장
 
     // 3. Fetch snacks
     const { data: snacks, error: snacksErr } = await supabaseClient.from('kchaple_snacks').select('student_id');
     if (snacksErr) throw snacksErr;
 
-    // Process dailyStatsData { 'YYYY-MM-DD': count }
+    // Process dailyStatsData { 'YYYY-MM-DD': { chapel: n, discipleship: m } }
     dailyStatsData = {};
     attendance.forEach(a => {
       const d = a.date;
-      dailyStatsData[d] = (dailyStatsData[d] || 0) + 1;
+      if (!dailyStatsData[d]) dailyStatsData[d] = { chapel: 0, discipleship: 0 };
+      dailyStatsData[d].chapel++;
+    });
+    (discipleship || []).forEach(d => {
+      const date = d.date;
+      if (!dailyStatsData[date]) dailyStatsData[date] = { chapel: 0, discipleship: 0 };
+      dailyStatsData[date].discipleship++;
     });
 
     // Process serverStats { id: { name, count, received } }
@@ -495,7 +508,7 @@ async function fetchServerStats() {
       serverStats[a.student_id].count++;
     });
 
-    snacks.forEach(s => {
+    (snacks || []).forEach(s => {
       if (serverStats[s.student_id]) {
         serverStats[s.student_id].received = true;
       }
