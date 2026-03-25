@@ -8,7 +8,7 @@
 // ────────────────────────────────────
 const STORAGE_KEY  = 'chapel_settings';
 const RECORDS_KEY  = 'chapel_records';  // { 'YYYY-MM-DD': [{id, name, time}, ...] }
-const DEFAULT_THRESHOLD = 3;
+const DEFAULT_THRESHOLD = 5;
 
 // 2026학년도 범위 설정 (2026.03 ~ 2027.02)
 const START_DATE_LIMIT = '2026-03-01';
