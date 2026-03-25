@@ -100,13 +100,18 @@ html, body {
   border-radius: 14px;
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  gap: 12px;
+  padding: 0;
   min-height: 70px;
+  position: relative;
   animation: slideDown 0.3s ease;
 }
 .mentor-main-box.hidden { display: none; }
-.mentor-main-box .material-icons-round { color: var(--accent); font-size: 24px; }
+.mentor-main-box .material-icons-round { 
+  color: var(--accent); 
+  font-size: 24px;
+  position: absolute;
+  left: 20px;
+}
 .mentor-main-input {
   flex: 1;
   border: none;
