@@ -239,20 +239,7 @@ function bindEvents() {
     });
   });
 
-  // 멘토 관리 (v2.6)
-  document.getElementById('addMentorBtn').addEventListener('click', () => {
-    const name = document.getElementById('mentorInput').value.trim();
-    if (name) {
-      if (!settings.mentors.includes(name)) {
-        settings.mentors.push(name);
-        saveSettingsToStorage();
-        renderMentorList();
-        document.getElementById('mentorInput').value = '';
-      } else {
-        showToast('이미 등록된 이름입니다');
-      }
-    }
-  });
+
 
   // 양육자 이름 수동 저장 (v2.7)
   const mentorMain = document.getElementById('mentorNameMain');
