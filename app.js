@@ -29,6 +29,7 @@ let currentTab   = 'pending'; // 'pending', 'received', 'all'
 let serverStats  = {};        // { id: { name, count, received } }
 let dailyStatsData = {};      // 서버에서 받아온 날짜별 통계 보관 (v2.2 추가)
 let allAttendanceRaw = [];    // 전체 출석 로우 데이터 (상세 조회용)
+let currentMode = 'chapel';   // 'chapel' (일반예배), '1on1' (제자훈련)
 
 // ────────────────────────────────────
 // DOM 요소
@@ -60,6 +61,7 @@ function init() {
   loadAllRecords();
   syncTodayRecords();
   renderDateDisplay();
+  renderMentorList(); // 추가
   bindEvents();
 }
 
@@ -73,6 +75,7 @@ function loadSettings() {
       settings = { ...settings };
     }
   }
+  if (!settings.mentors) settings.mentors = []; // 기저값 설정
   thresholdValEl.textContent = settings.threshold;
 }
 
@@ -205,6 +208,64 @@ function bindEvents() {
 
   // 오버레이 클릭으로 닫기
   overlay.addEventListener('click', closeOverlay);
+
+  // 모드 전환 (v2.6)
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentMode = tab.dataset.mode;
+      document.querySelector('.mode-tabs').dataset.mode = currentMode;
+      
+      // 모드 변경 시 UI 초기화
+      currentInput = '';
+      updateDisplay();
+      clearResultBadge();
+      
+      if (currentMode === '1on1') {
+        showToast('🏃 1:1 제자훈련 모드로 전환됨');
+      } else {
+        showToast('⛪ 일반 예배 출석 모드로 전환됨');
+      }
+    });
+  });
+
+  // 멘토 관리 (v2.6)
+  document.getElementById('addMentorBtn').addEventListener('click', () => {
+    const name = document.getElementById('mentorInput').value.trim();
+    if (name) {
+      if (!settings.mentors.includes(name)) {
+        settings.mentors.push(name);
+        saveSettingsToStorage();
+        renderMentorList();
+        document.getElementById('mentorInput').value = '';
+      } else {
+        showToast('이미 등록된 이름입니다');
+      }
+    }
+  });
+}
+
+function renderMentorList() {
+  const list = document.getElementById('mentorList');
+  if (settings.mentors.length === 0) {
+    list.innerHTML = '<div class="empty-msg">등록된 담당자가 없습니다</div>';
+    return;
+  }
+  list.innerHTML = settings.mentors.map(m => `
+    <div class="mentor-item">
+      <span>${m}</span>
+      <span class="material-icons-round del-btn" onclick="deleteMentor('${m}')">delete</span>
+    </div>
+  `).join('');
+}
+
+function deleteMentor(name) {
+  if (confirm(`${name} 담당자를 삭제할까요?`)) {
+    settings.mentors = settings.mentors.filter(m => m !== name);
+    saveSettingsToStorage();
+    renderMentorList();
+  }
 }
 
 // ────────────────────────────────────
@@ -513,6 +574,58 @@ async function submitAttendance() {
     const name = student.name;
     const dateStr = getTodayKey();
 
+    // --- [v2.6 제자훈련 모드 처리] ---
+    if (currentMode === '1on1') {
+      // 1. 배정 확인 (Supabase에서 멘토 확인)
+      const { data: assign, error: assignErr } = await supabaseClient
+        .from('kchaple_discipleship_assignments')
+        .select('mentor_name')
+        .eq('student_id', studentId)
+        .maybeSingle();
+      
+      let mentorName = assign ? assign.mentor_name : null;
+
+      // 멘토가 없으면 물어보기
+      if (!mentorName) {
+        if (settings.mentors.length === 0) {
+          showToast('❌ 등록된 담당자가 없습니다. 설정에서 담당자를 먼저 추가하세요.');
+          isSubmitting = false; setSubmitLoading(false); return;
+        }
+        
+        // 간단한 Prompt로 멘토 선택 (현실적으로는 UI 팝업이 좋지만 일단 구현)
+        const choice = prompt(`${name} 학생의 담당자를 입력하세요:\n(${settings.mentors.join(', ')})`);
+        if (!choice || !settings.mentors.includes(choice)) {
+          showToast('취소되었습니다'); isSubmitting = false; setSubmitLoading(false); return;
+        }
+        mentorName = choice;
+        
+        // 배정 정보 저장
+        await supabaseClient.from('kchaple_discipleship_assignments').upsert({ student_id: studentId, mentor_name: mentorName });
+      }
+
+      // 2. 제자훈련 기록
+      const { error: discErr } = await supabaseClient
+        .from('kchaple_discipleship_logs')
+        .insert([{ student_id: studentId, mentor_name: mentorName, date: dateStr }]);
+
+      if (discErr && discErr.code !== '23505') throw discErr;
+
+      // 3. 현재까지 횟수 계산 (4주차 완료 여부 확인용)
+      const { count: discCount } = await supabaseClient
+        .from('kchaple_discipleship_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', studentId)
+        .gte('date', START_DATE_LIMIT)
+        .lte('date', END_DATE_LIMIT);
+
+      const statusMsg = discCount >= 4 ? `🎉 수료생(완료) - ${discCount}회차` : `🏃 ${discCount}회차 진행 중`;
+      showOverlay('📖', `${name} & ${mentorName}`, statusMsg);
+      
+      // 4. 일반 출석도 자동 체크 (아래 로직으로 이어짐)
+      showToast('✅ 제자훈련 및 일반 예배 동시 체크됨');
+    }
+    // --- [v2.6 끝] ---
+
     // 2. Check duplicate today
     const { data: existing, error: existErr } = await supabaseClient
       .from('kchaple_attendance')
@@ -530,8 +643,10 @@ async function submitAttendance() {
         .gte('date', START_DATE_LIMIT)
         .lte('date', END_DATE_LIMIT);
         
-      showDupBadge(`✅ ${name} (${count || 1}회 출석)`);
-      showOverlay('✅', name, `현재 누적 ${count || 1}회 (이미 출석함)`);
+      if (currentMode === 'chapel') {
+        showDupBadge(`✅ ${name} (${count || 1}회 출석)`);
+        showOverlay('✅', name, `현재 누적 ${count || 1}회 (이미 출석함)`);
+      }
     } else {
       // Insert new attendance
       const { error: insertErr } = await supabaseClient
@@ -558,8 +673,10 @@ async function submitAttendance() {
       allRecords[key] = todayRecords;
       saveAllRecords();
 
-      showSuccessBadge(`🎉 ${name} (${count || 1}회 출석)`);
-      showOverlay('🙌', name, `${studentId} · 출석 완료 (누적 ${count || 1}회)`);
+      if (currentMode === 'chapel') {
+        showSuccessBadge(`🎉 ${name} (${count || 1}회 출석)`);
+        showOverlay('🙌', name, `${studentId} · 출석 완료 (누적 ${count || 1}회)`);
+      }
     }
   } catch (err) {
     showErrorBadge('🌐 네트워크 오류 - 인터넷 접속이나 DB를 확인하세요');

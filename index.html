@@ -54,6 +54,13 @@
     <!-- 날짜 표시 (요일 포함) -->
     <div class="date-display" id="dateDisplay"></div>
     
+    <!-- 모드 전환 탭 (v2.6) -->
+    <div class="mode-tabs">
+      <div id="modeTabBg" class="mode-tab-bg"></div>
+      <button class="mode-tab active" data-mode="chapel">예배 출석</button>
+      <button class="mode-tab" data-mode="1on1">1:1 제자훈련</button>
+    </div>
+    
     <div class="id-display" id="idDisplay">
       <span id="idText" class="id-placeholder">학번 입력</span>
     </div>
@@ -113,7 +120,22 @@
         <div id="dailyStatsList" class="daily-stats-list"></div>
       </div>
 
-      <!-- 요약 카드 -->
+      <!-- 제자훈련 담당자 관리 (v2.6) -->
+      <div class="settings-card">
+        <div class="settings-item">
+          <div class="settings-label"><span class="material-icons-round">person_add</span>제자훈련 담당자(멘토) 관리</div>
+          <div class="mentor-manage-box">
+             <div class="mentor-input-row">
+               <input type="text" id="mentorInput" class="settings-input" placeholder="새 담당자 이름">
+               <button id="addMentorBtn" class="icon-btn" style="background:var(--accent);color:white;width:44px;height:44px"><span class="material-icons-round">add</span></button>
+             </div>
+             <div id="mentorList" class="mentor-list">
+               <!-- 담당자 목록이 여기에 렌더링됨 -->
+               <div class="empty-msg">등록된 담당자가 없습니다</div>
+             </div>
+          </div>
+        </div>
+      </div>
       <div class="stats-summary-row">
       <div class="stat-card">
         <div class="stat-num" id="totalToday">-</div>

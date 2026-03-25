@@ -54,6 +54,56 @@ html, body {
 }
 .app-header.sub { padding: 16px 18px; }
 
+/* ── Mode Switcher (v2.6) ── */
+.mode-tabs {
+  display: flex;
+  margin: 10px 20px;
+  background: #e2e8f0;
+  border-radius: 12px;
+  position: relative;
+  padding: 4px;
+}
+.mode-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  z-index: 1;
+  transition: color 0.3s;
+}
+.mode-tab.active { color: white; }
+.mode-tab-bg {
+  position: absolute;
+  top: 4px; bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  background: var(--accent);
+  border-radius: 10px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(108,99,255,0.3);
+}
+.mode-tabs[data-mode="1on1"] .mode-tab-bg { transform: translateX(100%); }
+
+/* ── Mentor Management (v2.6) ── */
+.mentor-manage-box { display: flex; flex-direction: column; gap: 12px; }
+.mentor-input-row { display: flex; gap: 8px; }
+.mentor-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 200px; overflow-y: auto;
+  background: white; border-radius: 10px; padding: 10px;
+}
+.mentor-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; background: #f8fafc; border-radius: 8px;
+  font-size: 14px; font-weight: 600;
+}
+.mentor-item .del-btn { color: var(--red); cursor: pointer; opacity: 0.6; }
+.mentor-item .del-btn:hover { opacity: 1; }
+
 .header-left { display: flex; align-items: center; gap: 14px; }
 .school-badge {
   width: 56px; height: 56px;
