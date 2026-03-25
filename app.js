@@ -10,6 +10,10 @@ const STORAGE_KEY  = 'chapel_settings';
 const RECORDS_KEY  = 'chapel_records';  // { 'YYYY-MM-DD': [{id, name, time}, ...] }
 const DEFAULT_THRESHOLD = 3;
 
+// 2026학년도 범위 설정 (2026.03 ~ 2027.02)
+const START_DATE_LIMIT = '2026-03-01';
+const END_DATE_LIMIT   = '2027-02-28';
+
 // Supabase Client Initialization
 const supabaseClient = window.supabase ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY) : null;
 
@@ -246,8 +250,12 @@ async function fetchServerStats() {
     const { data: students, error: studentsErr } = await supabaseClient.from('kchaple_students').select('*');
     if (studentsErr) throw studentsErr;
 
-    // 2. Fetch attendance grouped by student, and daily stats
-    const { data: attendance, error: attErr } = await supabaseClient.from('kchaple_attendance').select('*');
+    // 2. Fetch attendance grouped by student, and daily stats (Filter by current academic year)
+    const { data: attendance, error: attErr } = await supabaseClient
+      .from('kchaple_attendance')
+      .select('*')
+      .gte('date', START_DATE_LIMIT)
+      .lte('date', END_DATE_LIMIT);
     if (attErr) throw attErr;
 
     // 3. Fetch snacks
@@ -382,7 +390,9 @@ async function submitAttendance() {
       const { count } = await supabaseClient
         .from('kchaple_attendance')
         .select('*', { count: 'exact', head: true })
-        .eq('student_id', studentId);
+        .eq('student_id', studentId)
+        .gte('date', START_DATE_LIMIT)
+        .lte('date', END_DATE_LIMIT);
         
       showDupBadge(`✅ ${name} (${count || 1}회 출석)`);
       showOverlay('✅', name, `현재 누적 ${count || 1}회 (이미 출석함)`);
@@ -398,7 +408,9 @@ async function submitAttendance() {
       const { count } = await supabaseClient
         .from('kchaple_attendance')
         .select('*', { count: 'exact', head: true })
-        .eq('student_id', studentId);
+        .eq('student_id', studentId)
+        .gte('date', START_DATE_LIMIT)
+        .lte('date', END_DATE_LIMIT);
 
       // Local state update
       const now = new Date();
