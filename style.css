@@ -58,7 +58,7 @@ html, body {
 .mode-tabs {
   display: flex;
   margin: 10px auto;
-  width: 95%;
+  width: 94%;
   background: #e2e8f0;
   border-radius: 14px;
   position: relative;
@@ -93,7 +93,8 @@ html, body {
 
 /* ── Mentor Input Main (v2.7) ── */
 .mentor-main-box {
-  margin: 0 12px 10px 12px;
+  margin: 0 auto 10px auto;
+  width: 94%;
   background: var(--surface2);
   border: 1px dashed var(--accent);
   border-radius: 14px;
@@ -259,7 +260,7 @@ html, body {
 
 /* ── Input Area ── */
 .input-area {
-  padding: 8px 20px 0px;
+  padding: 0px 3% 4px;
   display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
 
