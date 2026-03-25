@@ -298,15 +298,15 @@ function renderDailyStatsList() {
     const d = dailyStatsData[date];
     const item = document.createElement('div');
     item.className = 'daily-item';
+    item.style.display = 'flex';
+    item.style.justifyContent = 'space-between';
     item.style.cursor = 'pointer';
     item.onclick = () => showDailyDetail(date);
     
-    // 제자훈련 인원 표시 (v2.8)
-    const dText = d.discipleship > 0 ? ` <span style="font-size:12px; color:var(--text-sub); margin-left:8px;">(제자: ${d.discipleship}명)</span>` : '';
-    
     item.innerHTML = `
-      <span>${date} ${dText}</span>
-      <span class="count">${d.chapel}명 <span class="material-icons-round" style="font-size:14px;vertical-align:middle">chevron_right</span></span>
+      <span style="flex: 1.5;">${date}</span>
+      <span style="flex: 1; text-align: center; color: var(--accent); font-weight: 800;">${d.discipleship || 0}명</span>
+      <span class="count" style="flex: 1; text-align: right;">${d.chapel || 0}명 <span class="material-icons-round" style="font-size:14px;vertical-align:middle">chevron_right</span></span>
     `;
     listEl.appendChild(item);
   });
