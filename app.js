@@ -76,7 +76,12 @@ function loadSettings() {
     }
   }
   if (!settings.mentors) settings.mentors = []; // 기저값 설정
+  if (!settings.lastMentorName) settings.lastMentorName = ''; // 마지막 양육자
   thresholdValEl.textContent = settings.threshold;
+  
+  // 양육자 입력창 초기화 (v2.7)
+  const mentorMain = document.getElementById('mentorNameMain');
+  if (mentorMain) mentorMain.value = settings.lastMentorName;
 }
 
 function saveSettingsToStorage() {
@@ -217,6 +222,15 @@ function bindEvents() {
       currentMode = tab.dataset.mode;
       document.querySelector('.mode-tabs').dataset.mode = currentMode;
       
+      const mentorBox = document.getElementById('mentorInputMainBox');
+      if (currentMode === '1on1') {
+        mentorBox.classList.remove('hidden');
+        showToast('🏃 1:1 제자훈련 모드로 전환됨');
+      } else {
+        mentorBox.classList.add('hidden');
+        showToast('⛪ 일반 예배 출석 모드로 전환됨');
+      }
+
       // 모드 변경 시 UI 초기화
       currentInput = '';
       updateDisplay();
@@ -244,6 +258,15 @@ function bindEvents() {
       }
     }
   });
+
+  // 양육자 이름 수동 저장 (v2.7)
+  const mentorMain = document.getElementById('mentorNameMain');
+  if (mentorMain) {
+    mentorMain.addEventListener('input', () => {
+      settings.lastMentorName = mentorMain.value.trim();
+      saveSettingsToStorage();
+    });
+  }
 }
 
 function renderMentorList() {
@@ -555,6 +578,10 @@ async function submitAttendance() {
   resultBadge.className   = 'result-badge';
 
   const studentId = currentInput.trim();
+  if (studentId.length !== 4) {
+    showToast('❌ 학번 4자리를 정확히 입력해 주세요.');
+    isSubmitting = false; setSubmitLoading(false); return;
+  }
 
   try {
     // 1. Check if student exists
@@ -583,23 +610,17 @@ async function submitAttendance() {
         .eq('student_id', studentId)
         .maybeSingle();
       
-      let mentorName = assign ? assign.mentor_name : null;
+      const mentorMainInput = document.getElementById('mentorNameMain').value.trim();
+      let mentorName = mentorMainInput || (assign ? assign.mentor_name : null);
 
       // 멘토가 없으면 물어보기
       if (!mentorName) {
-        if (settings.mentors.length === 0) {
-          showToast('❌ 등록된 담당자가 없습니다. 설정에서 담당자를 먼저 추가하세요.');
-          isSubmitting = false; setSubmitLoading(false); return;
-        }
-        
-        // 간단한 Prompt로 멘토 선택 (현실적으로는 UI 팝업이 좋지만 일단 구현)
-        const choice = prompt(`${name} 학생의 담당자를 입력하세요:\n(${settings.mentors.join(', ')})`);
-        if (!choice || !settings.mentors.includes(choice)) {
-          showToast('취소되었습니다'); isSubmitting = false; setSubmitLoading(false); return;
-        }
-        mentorName = choice;
-        
-        // 배정 정보 저장
+        showToast('❌ 양육자 성함을 먼저 입력해 주세요.');
+        isSubmitting = false; setSubmitLoading(false); return;
+      }
+
+      // 배정 정보 업데이트 (입력한 이름이 있으면 자동 배정/갱신)
+      if (mentorMainInput) {
         await supabaseClient.from('kchaple_discipleship_assignments').upsert({ student_id: studentId, mentor_name: mentorName });
       }
 
@@ -643,9 +664,9 @@ async function submitAttendance() {
         .gte('date', START_DATE_LIMIT)
         .lte('date', END_DATE_LIMIT);
         
-      if (currentMode === 'chapel') {
-        showDupBadge(`✅ ${name} (${count || 1}회 출석)`);
-        showOverlay('✅', name, `현재 누적 ${count || 1}회 (이미 출석함)`);
+      if (currentMode === 'chapel' || currentMode === '1on1') {
+        showDupBadge(`✅ ${name} (이미 출석함)`);
+        showOverlay('✅', name, `이미 출석 완료되었습니다. 오늘 하루도 평안하세요! 😊`);
       }
     } else {
       // Insert new attendance
