@@ -614,9 +614,10 @@ html, body {
 }
 .detail-section { display: flex; flex-direction: column; gap: 12px; }
 .detail-section-title {
-  font-size: 14px; font-weight: 700; color: var(--accent);
-  border-left: 4px solid var(--accent);
-  padding-left: 10px;
+  font-size: 16px; font-weight: 800; color: var(--accent);
+  border-left: 5px solid var(--accent);
+  padding: 2px 0 2px 12px;
+  margin-bottom: 4px;
 }
 
 .detail-grid {
@@ -633,8 +634,8 @@ html, body {
   align-items: center;
   gap: 4px;
 }
-.detail-grid .grid-item span { font-size: 11px; color: var(--text-sub); }
-.detail-grid .grid-item strong { font-size: 18px; color: var(--text); }
+.detail-grid .grid-item span { font-size: 13px; color: var(--text-sub); }
+.detail-grid .grid-item strong { font-size: 22px; font-weight: 900; color: var(--text); }
 
 .detail-flex-wrap {
   display: flex;
@@ -642,16 +643,16 @@ html, body {
   gap: 8px;
 }
 .detail-flex-wrap .flex-item {
-  background: #f8f9ff;
-  border: 1px solid #eef0ff;
-  padding: 8px 12px;
-  border-radius: 10px;
+  background: #f0f2ff;
+  border: 1px solid #dce1ff;
+  padding: 10px 16px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
-.detail-flex-wrap .flex-item span { font-size: 12px; font-weight: 600; color: var(--accent); }
-.detail-flex-wrap .flex-item strong { font-size: 14px; }
+.detail-flex-wrap .flex-item span { font-size: 14px; font-weight: 700; color: var(--accent); }
+.detail-flex-wrap .flex-item strong { font-size: 16px; font-weight: 800; }
 
 .detail-grid-small {
   display: grid;
@@ -675,23 +676,23 @@ html, body {
   border-color: var(--accent2);
   box-shadow: 0 2px 6px rgba(78,205,196,0.15);
 }
-.grid-item-s .label { font-size: 9px; color: var(--text-sub); }
-.grid-item-s .val { font-size: 13px; font-weight: 800; color: var(--accent2); }
+.grid-item-s .label { font-size: 11px; color: var(--text-sub); margin-bottom: 2px; }
+.grid-item-s .val { font-size: 16px; font-weight: 900; color: var(--accent2); }
 
 .detail-student-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 .student-row {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
-  background: #fcfcfc;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 10px 16px;
+  background: #f8f9fb;
+  border-radius: 10px;
+  font-size: 16px;
 }
-.student-row .s-id { font-family: monospace; font-weight: 600; color: var(--text-sub); width: 60px; }
-.student-row .s-name { flex: 1; font-weight: 700; color: var(--text); }
-.student-row .s-count { font-weight: 800; color: var(--accent); opacity: 0.8; }
+.student-row .s-id { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--text-sub); width: 70px; }
+.student-row .s-name { flex: 1; font-weight: 800; color: var(--text); }
+.student-row .s-count { font-weight: 800; color: var(--accent); }
 
