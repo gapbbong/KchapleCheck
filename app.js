@@ -357,7 +357,7 @@ async function submitAttendance() {
   resultBadge.textContent = '';
   resultBadge.className   = 'result-badge';
 
-  const studentId = currentInput;
+  const studentId = currentInput.trim();
 
   try {
     // 1. Check if student exists

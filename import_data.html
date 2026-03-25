@@ -86,11 +86,10 @@
         // 처리 카운터
         let successCount = { students: 0, attendance: 0, snacks: 0 };
 
-        // 1. 명단 처리 (기존 '명단' 또는 '2026명단' 시트 모두 지원)
-        const possibleSheetNames = ['명단', '2026명단'];
-        let studentSheetName = possibleSheetNames.find(n => workbook.SheetNames.includes(n));
+        // 1. 2026년도 신학기 명단 처리 ('2026명단' 시트를 정확하게 찾습니다)
+        let studentSheetName = '2026명단';
         
-        if (studentSheetName) {
+        if (workbook.SheetNames.includes(studentSheetName)) {
           const sheet = workbook.Sheets[studentSheetName];
           const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
           log(`[${studentSheetName}] 시트 처리 중... (총 ${rows.length-1}행)`);
@@ -101,12 +100,15 @@
             if (id) {
               const { error } = await supabase.from('kchaple_students').upsert({ id, name });
               if (error) log(`학번 ${id} 추가 오류: ${error.message}`, 'error');
-              else successCount.students++;
+              else {
+                  successCount.students++;
+                  if (id === '1112') log(`[DEBUG] 1112 학번(${name}) 발견 및 DB 저장 중...`, 'info');
+              }
             }
           }
           log(`✅ [${studentSheetName}] ${successCount.students}명 학생 데이터 삽입 완료.`);
         } else {
-          log(`'명단' 또는 '2026명단' 시트를 찾을 수 없습니다.`, 'error');
+          log(`'2026명단' 시트를 찾을 수 없습니다. (엑셀 파일에 시트 이름이 정확히 '2026명단'인지 확인해주세요)`, 'error');
         }
 
         // 2. 다른 시트들 처리 (날짜, 간식지급 등)
