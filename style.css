@@ -68,8 +68,8 @@ html, body {
   flex: 1;
   border: none;
   background: transparent;
-  padding: 12px 2px;
-  font-size: 13.5px;
+  padding: 10px 2px;
+  font-size: 18px;
   font-weight: 800;
   color: #64748b;
   cursor: pointer;
@@ -220,7 +220,7 @@ html, body {
 .date-display {
   text-align: center;
   padding: 12px 0 8px;
-  font-size: 15px; /* 조금 더 크게 */
+  font-size: 18px; /* 학교 이름과 동일하게 */
   color: #000000; /* 완전 검정 */
   font-weight: 800; /* 아주 두껍게 */
   letter-spacing: 0.2px;
