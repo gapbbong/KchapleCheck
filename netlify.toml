@@ -7,3 +7,9 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Cache-Control = "no-cache"
+
+[[redirects]]
+  from = "/supabase-api/*"
+  to = "https://vanquishable-nonzoological-brandi.ngrok-free.dev/:splat"
+  status = 200
+  force = true
