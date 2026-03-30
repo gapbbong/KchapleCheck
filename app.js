@@ -14,8 +14,12 @@ const DEFAULT_THRESHOLD = 5;
 const START_DATE_LIMIT = '2026-03-01';
 const END_DATE_LIMIT   = '2027-02-28';
 
-// Supabase Client Initialization
-const supabaseClient = window.supabase ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY) : null;
+// Supabase Client Initialization (v3.9: ngrok 경고 무시 헤더 추가)
+const supabaseClient = window.supabase ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+  global: {
+    headers: { 'ngrok-skip-browser-warning': 'true' }
+  }
+}) : null;
 
 let settings = {
   threshold: DEFAULT_THRESHOLD
