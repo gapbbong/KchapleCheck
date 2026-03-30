@@ -507,7 +507,7 @@ async function fetchServerStats() {
     renderStatsScreen();
   } catch (err) {
     console.error('서버 통계 로드 실패:', err);
-    snackListEl.innerHTML = '<div class="empty-msg">서버 데이터를 불러오지 못했습니다</div>';
+    snackListEl.innerHTML = `<div class="empty-msg">서버 연결에 실패했습니다<br><small style="opacity:0.7">(${err.message})</small></div>`;
   }
 }
 
@@ -586,7 +586,14 @@ async function submitAttendance() {
       .eq('id', studentId)
       .maybeSingle();
 
-    if (studentErr || !student) {
+    if (studentErr) {
+      showErrorBadge('🌐 서버 연결 오류 (네트워크 확인)');
+      shakeDisplay();
+      showOverlay('🌐', '연결 오류', `서버에 접속할 수 없습니다. (에러: ${studentErr.message})`);
+      return;
+    }
+
+    if (!student) {
       showErrorBadge('❌ 등록되지 않은 학번입니다');
       shakeDisplay();
       showOverlay('❌', '학번 없음', `${studentId}는 명단에 없습니다`);
