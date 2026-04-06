@@ -420,23 +420,13 @@ function closeOverlay() {
   overlay.classList.add('hidden');
   overlay.classList.remove('show');
   
-  // 카드 스타일 초기화 (다음 출석 체크 팝업을 위해)
-  setTimeout(() => {
-    overlayCard.style = '';
-    overlayIcon.style.display = 'block';
-    overlayName.style.display = 'block';
-    overlaySub.style.display = 'block';
-    overlayIcon.innerHTML = ''; 
-    overlayCard.innerHTML = `
-      <div id="overlayIcon" class="overlay-icon"></div>
-      <div id="overlayName" class="overlay-name"></div>
-      <div id="overlaySub" class="overlay-sub"></div>
-    `;
-    // DOM 다시 찾기 (innerHTML로 날아갔으므로)
-    window.overlayIcon = document.getElementById('overlayIcon');
-    window.overlayName = document.getElementById('overlayName');
-    window.overlaySub  = document.getElementById('overlaySub');
-  }, 300);
+  // 카드 스타일 및 레이아웃 초기화 (다음 출석 체크 팝업을 위해)
+  overlayCard.style = '';
+  overlayCard.innerHTML = `
+    <div id="overlayIcon" class="overlay-icon"></div>
+    <div id="overlayName" class="overlay-name"></div>
+    <div id="overlaySub" class="overlay-sub"></div>
+  `;
 }
 
 
@@ -836,9 +826,20 @@ function shakeDisplay() {
 let overlayTimer = null;
 
 function showOverlay(icon, name, sub) {
-  overlayIcon.textContent = icon;
-  overlayName.textContent = name;
-  overlaySub.textContent  = sub;
+  // 만약 상세 통계 화면이 남아있다면 초기화
+  if (overlayCard.querySelector('.detail-view-container')) {
+    closeOverlay(); // 레이아웃 리셋 포함
+  }
+
+  // 최신 엘리먼트 참조 (innerHTML로 변경되었을 수 있으므로)
+  const iconEl = document.getElementById('overlayIcon');
+  const nameEl = document.getElementById('overlayName');
+  const subEl  = document.getElementById('overlaySub');
+
+  if (iconEl) iconEl.textContent = icon;
+  if (nameEl) nameEl.textContent = name;
+  if (subEl)  subEl.textContent  = sub;
+
   overlay.classList.remove('hidden');
   overlay.classList.add('show');
 
@@ -849,6 +850,16 @@ function showOverlay(icon, name, sub) {
 function closeOverlay() {
   overlay.classList.remove('show');
   overlay.classList.add('hidden');
+  
+  // 팝업이 완전히 닫힌 후(애니메이션 끝난 뒤) 원래 레이아웃으로 복구
+  setTimeout(() => {
+    overlayCard.style = '';
+    overlayCard.innerHTML = `
+      <div id="overlayIcon" class="overlay-icon"></div>
+      <div id="overlayName" class="overlay-name"></div>
+      <div id="overlaySub" class="overlay-sub"></div>
+    `;
+  }, 300);
 }
 
 // ────────────────────────────────────
