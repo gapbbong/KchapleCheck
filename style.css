@@ -482,6 +482,19 @@ html, body {
 }
 .received-badge span { color: var(--green); margin-right: 2px; }
 
+/* ── Long Press Deletion (v4.1) ── */
+.snack-item {
+  transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+  user-select: none; /* 롱 프레스 시 텍스트 선택 방지 */
+  -webkit-user-select: none;
+}
+.snack-item.pressing {
+  transform: scale(0.96);
+  background: var(--surface2) !important;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.06);
+  border-color: var(--accent);
+}
+
 .all-stats-item {
   background: var(--surface2);
   border: 1px solid var(--border);

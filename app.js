@@ -539,9 +539,82 @@ async function markSnackAsReceived(id, name) {
   } catch (err) {
     console.error('간식 지급 기록 실패:', err);
     showToast('❌ 기록 실패');
-  } finally {
+    } finally {
     isSubmitting = false;
   }
+}
+
+/**
+ * 특정 학생의 모든 데이터 삭제 (v4.0)
+ */
+async function deleteStudentComplete(id, name) {
+  if (isSubmitting) return;
+  const confirmed = confirm(`⚠️ [위험] ${name}(${id}) 학생의 모든 데이터를 삭제할까요?\n\n이 학생의 [출석, 제자훈련, 간식수령] 기록이 모두 사라집니다. 다시 복구할 수 없으니 신중히 결정해 주세요.`);
+  if (!confirmed) return;
+
+  isSubmitting = true;
+  showOverlay('🗑️', '삭제 중...', `${name} 데이터 정리 중`);
+
+  try {
+    // 1. Supabase에서 관련 테이블 데이터 연쇄 삭제
+    const tables = [
+      { name: 'kchaple_snacks', col: 'student_id' },
+      { name: 'kchaple_attendance', col: 'student_id' },
+      { name: 'kchaple_discipleship_logs', col: 'student_id' },
+      { name: 'kchaple_discipleship_assignments', col: 'student_id' },
+      { name: 'kchaple_students', col: 'id' }
+    ];
+
+    for (const table of tables) {
+      const { error } = await supabaseClient
+        .from(table.name)
+        .delete()
+        .eq(table.col, id);
+      
+      if (error) {
+        console.warn(`${table.name} 삭제 중 오류(무시가능):`, error.message);
+      }
+    }
+
+    // 2. 로컬 기록에서도 제거
+    Object.keys(allRecords).forEach(date => {
+      allRecords[date] = (allRecords[date] || []).filter(r => r.id !== id);
+    });
+    saveAllRecords();
+    syncTodayRecords();
+
+    showOverlay('✅', '삭제 완료', `${name} 학생의 모든 기록이 제거되었습니다.`);
+    
+    // 3. 데이터 다시 불러오기 (통계 화면 갱신)
+    setTimeout(fetchServerStats, 500);
+
+  } catch (err) {
+    console.error('데이터 삭제 실패:', err);
+    showToast('❌ 삭제 중 오류가 발생했습니다.');
+    } finally {
+    isSubmitting = false;
+  }
+}
+
+/**
+ * 롱 프레스 감지 (v4.1)
+ */
+let pressTimer = null;
+function h_start(e, id, name) {
+  if (e.target.closest('.snack-give-btn')) return; // 지급 버튼 클릭 시 제외
+  
+  const el = e.currentTarget;
+  el.classList.add('pressing');
+  
+  pressTimer = setTimeout(() => {
+    deleteStudentComplete(id, name);
+    h_end();
+  }, 850);
+}
+
+function h_end() {
+  clearTimeout(pressTimer);
+  document.querySelectorAll('.snack-item').forEach(el => el.classList.remove('pressing'));
 }
 
 // ────────────────────────────────────
@@ -840,17 +913,25 @@ function renderStatsScreen() {
     const isTarget = s.count >= settings.threshold;
     const isReceived = s.received;
     
-    return `<div class="snack-item ${isTarget && !isReceived ? 'highlight' : ''}">
+    return `<div class="snack-item ${isTarget && !isReceived ? 'highlight' : ''}" 
+                 onmousedown="h_start(event, '${s.id}', '${s.name}')" 
+                 onmouseup="h_end()" 
+                 onmouseleave="h_end()" 
+                 ontouchstart="h_start(event, '${s.id}', '${s.name}')" 
+                 ontouchend="h_end()" 
+                 ontouchmove="h_end()">
       <div class="snack-item-rank">${i + 1}</div>
       <div class="snack-item-info">
         <div class="snack-item-name">${s.name} ${isReceived ? '✅' : ''}</div>
         <div class="snack-item-id">${s.id}</div>
       </div>
       <div class="snack-item-count">${s.count}회</div>
-      ${isTarget && !isReceived ? 
-        `<button class="snack-give-btn" onclick="markSnackAsReceived('${s.id}', '${s.name}')">지급 완료</button>` : 
-        (isReceived ? '<div class="received-badge"><span>✓</span>수령함</div>' : '')
-      }
+      <div style="display: flex; gap: 6px;">
+        ${isTarget && !isReceived ? 
+          `<button class="snack-give-btn" onclick="markSnackAsReceived('${s.id}', '${s.name}')">지급 완료</button>` : 
+          (isReceived ? '<div class="received-badge"><span>✓</span>수령함</div>' : '')
+        }
+      </div>
     </div>`;
   }).join('');
 }
