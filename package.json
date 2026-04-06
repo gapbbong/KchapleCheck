@@ -6,6 +6,10 @@
     "start": "npx serve . -p 3000 --no-clipboard",
     "dev": "npx serve . -p 3000"
   },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1"
+  },
   "keywords": ["attendance", "chapel", "school"],
   "author": "경성전자고",
   "license": "MIT"

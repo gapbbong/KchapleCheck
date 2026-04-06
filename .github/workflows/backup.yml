@@ -1,0 +1,31 @@
+name: Scheduled Backup (Supabase to Git)
+
+on:
+  schedule:
+    # 매주 월요일 14:00 KST (05:00 UTC)
+    - cron: '0 5 * * 1'
+  workflow_dispatch: # 깃허브 페이지에서 수동 실행 가능하게 함
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 저장소 수정을 위해 쓰기 권한 필요
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Backup Script
+        env:
+          SERVICE_ROLE_KEY: ${{ secrets.SERVICE_ROLE_KEY }}
+        run: node backup_data.js
