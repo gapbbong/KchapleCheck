@@ -532,20 +532,20 @@ html, body {
   font-size: 14px; font-weight: 600; color: var(--text-sub);
 }
 .settings-label .material-icons-round { font-size: 18px; color: var(--accent); }
-.settings-input {
+.settings-input, .settings-date-input {
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   color: var(--text);
   font-family: 'Pretendard', monospace;
-  font-size: 13px;
+  font-size: 14px;
   resize: vertical;
   width: 100%;
   outline: none;
   transition: border-color .2s;
 }
-.settings-input:focus { border-color: var(--accent); }
+.settings-input:focus, .settings-date-input:focus { border-color: var(--accent); }
 
 .counter-row {
   display: flex; align-items: center; gap: 16px;

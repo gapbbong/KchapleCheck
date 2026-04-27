@@ -22,7 +22,8 @@ const supabaseClient = window.supabase ? window.supabase.createClient(CONFIG.SUP
 }) : null;
 
 let settings = {
-  threshold: DEFAULT_THRESHOLD
+  threshold: DEFAULT_THRESHOLD,
+  snackCycleStartDate: getTodayKey() // 기본값은 오늘
 };
 
 let todayRecords = [];   // 오늘 출석 [{id, name, time}]
@@ -83,12 +84,20 @@ function loadSettings() {
   if (!settings.lastMentorName) settings.lastMentorName = ''; // 마지막 양육자
   thresholdValEl.textContent = settings.threshold;
   
+  // 시작일 입력창 초기화 (추가)
+  const snackDateInput = document.getElementById('snackStartDateInput');
+  if (snackDateInput) snackDateInput.value = settings.snackCycleStartDate;
+
   // 양육자 입력창 초기화 (v2.7)
   const mentorMain = document.getElementById('mentorNameMain');
   if (mentorMain) mentorMain.value = settings.lastMentorName;
 }
 
 function saveSettingsToStorage() {
+  const snackDateInput = document.getElementById('snackStartDateInput');
+  if (snackDateInput) {
+    settings.snackCycleStartDate = snackDateInput.value;
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
@@ -461,8 +470,11 @@ async function fetchServerStats() {
 
     allAttendanceRaw = attendance; // 전역 저장
 
-    // 3. Fetch snacks
-    const { data: snacks, error: snacksErr } = await supabaseClient.from('kchaple_snacks').select('student_id');
+    // 3. Fetch snacks (Filter by cycle start date if possible)
+    const { data: snacks, error: snacksErr } = await supabaseClient
+      .from('kchaple_snacks')
+      .select('*')
+      .gte('created_at', settings.snackCycleStartDate);
     if (snacksErr) throw snacksErr;
 
     // Process dailyStatsData { 'YYYY-MM-DD': { chapel: n, discipleship: m } }
@@ -478,18 +490,23 @@ async function fetchServerStats() {
       dailyStatsData[date].discipleship++;
     });
 
-    // Process serverStats { id: { name, count, received } }
+    // Process serverStats { id: { name, count, cycleCount, received } }
     serverStats = {};
     students.forEach(s => {
-      serverStats[s.id] = { name: s.name, count: 0, received: false };
+      serverStats[s.id] = { name: s.name, count: 0, cycleCount: 0, received: false };
     });
     
-    // Fallback for missing students
+    // Fill counts
     attendance.forEach(a => {
       if (!serverStats[a.student_id]) {
-        serverStats[a.student_id] = { name: '이름없음', count: 0, received: false };
+        serverStats[a.student_id] = { name: '이름없음', count: 0, cycleCount: 0, received: false };
       }
       serverStats[a.student_id].count++;
+      
+      // 간식 주기 카운트 (시작일 이후 기록만)
+      if (a.date >= settings.snackCycleStartDate) {
+        serverStats[a.student_id].cycleCount++;
+      }
     });
 
     (snacks || []).forEach(s => {
@@ -725,17 +742,24 @@ async function submitAttendance() {
       .maybeSingle();
 
     if (existing) {
-      // Get count
-      const { count } = await supabaseClient
+      // Get counts (Total and Cycle)
+      const { count: totalCount } = await supabaseClient
         .from('kchaple_attendance')
         .select('*', { count: 'exact', head: true })
         .eq('student_id', studentId)
         .gte('date', START_DATE_LIMIT)
         .lte('date', END_DATE_LIMIT);
+
+      const { count: cycleCount } = await supabaseClient
+        .from('kchaple_attendance')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', studentId)
+        .gte('date', settings.snackCycleStartDate)
+        .lte('date', END_DATE_LIMIT);
         
       if (currentMode === 'chapel' || currentMode === '1on1') {
         showDupBadge(`✅ ${name} (이미 출석함)`);
-        showOverlay('✅', name, `이미 출석 완료되었습니다. 오늘 하루도 평안하세요! 😊`);
+        showOverlay('✅', name, `이미 출석 완료되었습니다.\n간식: ${cycleCount || 1}/${settings.threshold}회 (전체: ${totalCount || 1}회)`);
       }
     } else {
       // Insert new attendance
@@ -745,12 +769,19 @@ async function submitAttendance() {
         
       if (insertErr) throw insertErr;
 
-      // Get updated count
-      const { count } = await supabaseClient
+      // Get updated counts (Total and Cycle)
+      const { count: totalCount } = await supabaseClient
         .from('kchaple_attendance')
         .select('*', { count: 'exact', head: true })
         .eq('student_id', studentId)
         .gte('date', START_DATE_LIMIT)
+        .lte('date', END_DATE_LIMIT);
+
+      const { count: cycleCount } = await supabaseClient
+        .from('kchaple_attendance')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', studentId)
+        .gte('date', settings.snackCycleStartDate)
         .lte('date', END_DATE_LIMIT);
 
       // Local state update
@@ -764,8 +795,8 @@ async function submitAttendance() {
       saveAllRecords();
 
       if (currentMode === 'chapel') {
-        showSuccessBadge(`🎉 ${name} (${count || 1}회 출석)`);
-        showOverlay('🙌', name, `${studentId} · 출석 완료 (누적 ${count || 1}회)`);
+        showSuccessBadge(`🎉 ${name} (간식 ${cycleCount || 1}/${settings.threshold}회)`);
+        showOverlay('🙌', name, `간식까지: ${cycleCount || 1}/${settings.threshold}회 (전체: ${totalCount || 1}회)`);
       }
     }
   } catch (err) {
@@ -894,10 +925,10 @@ function renderStatsScreen() {
   }
 
   const list = Object.entries(serverStats).map(([id, v]) => ({
-    id, name: v.name, count: v.count, received: v.received
-  })).sort((a, b) => b.count - a.count);
+    id, name: v.name, count: v.count, cycleCount: v.cycleCount, received: v.received
+  })).sort((a, b) => b.cycleCount - a.cycleCount || b.count - a.count);
 
-  const pending = list.filter(s => s.count >= settings.threshold && !s.received);
+  const pending = list.filter(s => s.cycleCount >= settings.threshold && !s.received);
   const received = list.filter(s => s.received);
 
   document.getElementById('snackCount').textContent = pending.length;
@@ -921,7 +952,7 @@ function renderStatsScreen() {
   }
 
   snackListEl.innerHTML = displayList.map((s, i) => {
-    const isTarget = s.count >= settings.threshold;
+    const isTarget = s.cycleCount >= settings.threshold;
     const isReceived = s.received;
     
     return `<div class="snack-item ${isTarget && !isReceived ? 'highlight' : ''}" 
@@ -931,19 +962,19 @@ function renderStatsScreen() {
                  ontouchstart="h_start(event, '${s.id}', '${s.name}')" 
                  ontouchend="h_end()" 
                  ontouchmove="h_end()">
-      <div class="snack-item-rank">${i + 1}</div>
-      <div class="snack-item-info">
-        <div class="snack-item-name">${s.name} ${isReceived ? '✅' : ''}</div>
-        <div class="snack-item-id">${s.id}</div>
-      </div>
-      <div class="snack-item-count">${s.count}회</div>
-      <div style="display: flex; gap: 6px;">
-        ${isTarget && !isReceived ? 
-          `<button class="snack-give-btn" onclick="markSnackAsReceived('${s.id}', '${s.name}')">지급 완료</button>` : 
-          (isReceived ? '<div class="received-badge"><span>✓</span>수령함</div>' : '')
-        }
-      </div>
-    </div>`;
+       <div class="snack-item-rank">${i + 1}</div>
+       <div class="snack-item-info">
+         <div class="snack-item-name">${s.name} ${isReceived ? '✅' : ''}</div>
+         <div class="snack-item-id">${s.id} <span style="opacity:0.6">| 전체 ${s.count}회</span></div>
+       </div>
+       <div class="snack-item-count">${s.cycleCount}회</div>
+       <div style="display: flex; gap: 6px;">
+         ${isTarget && !isReceived ? 
+           `<button class="snack-give-btn" onclick="markSnackAsReceived('${s.id}', '${s.name}')">지급 완료</button>` : 
+           (isReceived ? '<div class="received-badge"><span>✓</span>수령함</div>' : '')
+         }
+       </div>
+     </div>`;
   }).join('');
 }
 
