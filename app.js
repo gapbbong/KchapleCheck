@@ -61,16 +61,17 @@ const thresholdValEl   = document.getElementById('thresholdVal');
 // ────────────────────────────────────
 // 초기화
 // ────────────────────────────────────
-function init() {
-  loadSettings();
+async function init() {
+  loadSettingsFromLocal();
   loadAllRecords();
+  await fetchGlobalSettings(); // 서버 설정 우선 로드
   syncTodayRecords();
   renderDateDisplay();
-  renderMentorList(); // 추가
+  renderMentorList(); 
   bindEvents();
 }
 
-function loadSettings() {
+function loadSettingsFromLocal() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try { 
@@ -80,25 +81,74 @@ function loadSettings() {
       settings = { ...settings };
     }
   }
-  if (!settings.mentors) settings.mentors = []; // 기저값 설정
-  if (!settings.lastMentorName) settings.lastMentorName = ''; // 마지막 양육자
+  if (!settings.mentors) settings.mentors = []; 
+  if (!settings.lastMentorName) settings.lastMentorName = ''; 
   thresholdValEl.textContent = settings.threshold;
   
-  // 시작일 입력창 초기화 (추가)
   const snackDateInput = document.getElementById('snackStartDateInput');
   if (snackDateInput) snackDateInput.value = settings.snackCycleStartDate;
 
-  // 양육자 입력창 초기화 (v2.7)
   const mentorMain = document.getElementById('mentorNameMain');
   if (mentorMain) mentorMain.value = settings.lastMentorName;
 }
 
-function saveSettingsToStorage() {
+/**
+ * 서버에서 공통 설정 불러오기 (v4.2)
+ */
+async function fetchGlobalSettings() {
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('kchaple_config')
+      .select('*');
+    
+    if (error) {
+      console.warn('글로벌 설정을 불러올 수 없습니다 (테이블 확인 필요):', error.message);
+      return;
+    }
+    
+    if (data && data.length > 0) {
+      data.forEach(item => {
+        if (item.key === 'threshold') settings.threshold = parseInt(item.value);
+        if (item.key === 'snackCycleStartDate') settings.snackCycleStartDate = item.value;
+      });
+      // UI 동기화
+      thresholdValEl.textContent = settings.threshold;
+      const snackDateInput = document.getElementById('snackStartDateInput');
+      if (snackDateInput) snackDateInput.value = settings.snackCycleStartDate;
+    }
+  } catch (err) {
+    console.error('글로벌 설정 로드 중 오류:', err);
+  }
+}
+
+async function saveSettingsToStorage() {
   const snackDateInput = document.getElementById('snackStartDateInput');
   if (snackDateInput) {
     settings.snackCycleStartDate = snackDateInput.value;
   }
+  
+  // 1. 로컬 저장 (캐시)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+
+  // 2. 서버 저장 (v4.2 공통 설정)
+  if (supabaseClient) {
+    try {
+      const configItems = [
+        { key: 'threshold', value: String(settings.threshold) },
+        { key: 'snackCycleStartDate', value: settings.snackCycleStartDate }
+      ];
+
+      for (const item of configItems) {
+        await supabaseClient
+          .from('kchaple_config')
+          .upsert(item, { onConflict: 'key' });
+      }
+    } catch (err) {
+      console.error('서버 설정 저장 실패:', err);
+      showToast('⚠️ 서버 저장 실패 (로컬에만 저장됨)');
+    }
+  }
 }
 
 function loadAllRecords() {
@@ -444,6 +494,9 @@ function closeOverlay() {
 // ────────────────────────────────────
 async function fetchServerStats() {
   if (!supabaseClient) return;
+  
+  // 서버 설정 최신화 (다른 기기에서 변경했을 수 있음)
+  await fetchGlobalSettings();
   
   const snackListEl = document.getElementById('snackList');
   snackListEl.innerHTML = '<div class="loading-spinner-wrap"><div class="spinner"></div></div>';
