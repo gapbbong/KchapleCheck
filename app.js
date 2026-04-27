@@ -99,7 +99,7 @@ async function fetchGlobalSettings() {
   if (!supabaseClient) return;
   try {
     const { data, error } = await supabaseClient
-      .from('kchaple_config')
+      .from('kchaple_global_configs')
       .select('*');
     
     if (error) {
@@ -141,7 +141,7 @@ async function saveSettingsToStorage() {
 
       for (const item of configItems) {
         await supabaseClient
-          .from('kchaple_config')
+          .from('kchaple_global_configs')
           .upsert(item, { onConflict: 'key' });
       }
     } catch (err) {
