@@ -162,6 +162,56 @@ function saveAllRecords() {
   localStorage.setItem(RECORDS_KEY, JSON.stringify(allRecords));
 }
 
+function exportAllLocalData() {
+  const saved = localStorage.getItem(RECORDS_KEY);
+  if (!saved || saved === '{}') {
+    showToast('기기 내에 보관된 로컬 출석 기록이 없습니다.');
+    return;
+  }
+  
+  try {
+    const data = JSON.parse(saved);
+    let outputText = "=== [기기 로컬 출석 기록 전체 백업] ===\n\n";
+    const dates = Object.keys(data).sort().reverse();
+    
+    dates.forEach(date => {
+      const records = data[date];
+      if (records && records.length > 0) {
+        outputText += `[📅 ${date}] - 총 ${records.length}명\n`;
+        outputText += records.map(r => `${r.id} (${r.name || ''})`).join('\n');
+        outputText += '\n\n';
+      }
+    });
+
+    const overlay = document.getElementById('overlay');
+    const overlayCard = document.getElementById('overlayCard');
+    
+    let html = `
+      <div style="padding: 20px; text-align: left; color: #333;">
+        <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 18px; font-weight: bold;">📥 기기 로컬 데이터 백업</div>
+          <button onclick="document.getElementById('overlay').classList.add('hidden'); document.getElementById('overlay').classList.remove('show');" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">✕</button>
+        </div>
+        <p style="font-size: 14px; color: #666; margin-bottom: 10px;">아래 텍스트를 복사하여 보내주시거나 메모장에 백업하세요!</p>
+        <textarea id="recoveryTextarea" style="width: 100%; height: 300px; font-family: monospace; font-size: 13px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;" readonly>${outputText}</textarea>
+        <button onclick="navigator.clipboard.writeText(document.getElementById('recoveryTextarea').value); alert('전체 복사되었습니다!');" style="margin-top: 15px; width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+          전체 복사하기 📋
+        </button>
+      </div>
+    `;
+
+    overlayCard.innerHTML = html;
+    overlayCard.style.padding = '0';
+    overlayCard.style.width = '90%';
+    overlayCard.style.maxWidth = '500px';
+    
+    overlay.classList.add('show');
+    overlay.classList.remove('hidden');
+  } catch (err) {
+    showToast('데이터 파싱 오류: ' + err.message);
+  }
+}
+
 function getTodayKey() {
   const now = new Date();
   const y = now.getFullYear();
@@ -266,6 +316,12 @@ function bindEvents() {
     settings.threshold++;
     thresholdValEl.textContent = settings.threshold;
   });
+
+  // 로컬 기록 전체 추출 (복구용)
+  const exportBtn = document.getElementById('exportLocalRecords');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', exportAllLocalData);
+  }
 
   // 로컬 초기화
   document.getElementById('clearTodayLocal').addEventListener('click', () => {
