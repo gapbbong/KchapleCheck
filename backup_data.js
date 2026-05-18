@@ -43,11 +43,29 @@ async function runBackup() {
       tables: {}
     };
 
+    // 1,000건 제한 없이 무제한으로 모든 레코드를 가져오는 페이징 함수
+    async function fetchAllRows(table) {
+      let allRows = [];
+      const pageSize = 1000;
+      let from = 0;
+
+      while (true) {
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase.from(table).select('*').range(from, to);
+        if (error) throw new Error(`${table} 로드 실패: ${error.message}`);
+        if (!data || data.length === 0) break;
+
+        allRows = allRows.concat(data);
+        if (data.length < pageSize) break; // 마지막 페이지 도달
+        from += pageSize;
+      }
+      return allRows;
+    }
+
     for (const table of tables) {
       console.log(` - ${table} 읽는 중...`);
-      const { data, error } = await supabase.from(table).select('*').limit(50000);
-      if (error) throw new Error(`${table} 로드 실패: ${error.message}`);
-      backupData.tables[table] = data;
+      backupData.tables[table] = await fetchAllRows(table);
+      console.log(`   └─ 총 ${backupData.tables[table].length}건 로드 완료`);
     }
 
     // 3. 파일 저장
