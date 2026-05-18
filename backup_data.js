@@ -45,7 +45,7 @@ async function runBackup() {
 
     for (const table of tables) {
       console.log(` - ${table} 읽는 중...`);
-      const { data, error } = await supabase.from(table).select('*');
+      const { data, error } = await supabase.from(table).select('*').limit(50000);
       if (error) throw new Error(`${table} 로드 실패: ${error.message}`);
       backupData.tables[table] = data;
     }

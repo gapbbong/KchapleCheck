@@ -503,7 +503,7 @@ async function fetchServerStats() {
 
   try {
     // 1. Fetch all students
-    const { data: students, error: studentsErr } = await supabaseClient.from('kchaple_students').select('*');
+    const { data: students, error: studentsErr } = await supabaseClient.from('kchaple_students').select('*').limit(5000);
     if (studentsErr) throw studentsErr;
 
     // 2. Fetch attendance and daily stats (Filter by current academic year)
@@ -511,14 +511,16 @@ async function fetchServerStats() {
       .from('kchaple_attendance')
       .select('*')
       .gte('date', START_DATE_LIMIT)
-      .lte('date', END_DATE_LIMIT);
+      .lte('date', END_DATE_LIMIT)
+      .limit(20000);
     if (attErr) throw attErr;
 
     const { data: discipleship, error: dErr } = await supabaseClient
       .from('kchaple_discipleship_logs')
       .select('date')
       .gte('date', START_DATE_LIMIT)
-      .lte('date', END_DATE_LIMIT);
+      .lte('date', END_DATE_LIMIT)
+      .limit(5000);
     if (dErr) console.error('제자훈련 로그 로드 실패:', dErr);
 
     allAttendanceRaw = attendance; // 전역 저장
@@ -527,7 +529,8 @@ async function fetchServerStats() {
     const { data: snacks, error: snacksErr } = await supabaseClient
       .from('kchaple_snacks')
       .select('*')
-      .gte('created_at', settings.snackCycleStartDate);
+      .gte('created_at', settings.snackCycleStartDate)
+      .limit(5000);
     if (snacksErr) throw snacksErr;
 
     // Process dailyStatsData { 'YYYY-MM-DD': { chapel: n, discipleship: m } }
