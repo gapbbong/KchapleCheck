@@ -5,7 +5,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 // 1. 설정 (config.js 및 .env 내용 기반)
-const SUPABASE_URL = 'https://vanquishable-nonzoological-brandi.ngrok-free.dev';
+const SUPABASE_URL = 'https://oxalbyjhvqbdwnbdrpwv.supabase.co';
 const SERVICE_KEY = process.env.SERVICE_ROLE_KEY;
 
 if (!SERVICE_KEY) {
@@ -13,9 +13,7 @@ if (!SERVICE_KEY) {
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
-  global: { headers: { 'ngrok-skip-browser-warning': 'true' } }
-});
+const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
 async function runBackup() {
   const now = new Date();

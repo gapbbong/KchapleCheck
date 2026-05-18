@@ -10,6 +10,6 @@
 
 [[redirects]]
   from = "/supabase-api/*"
-  to = "https://vanquishable-nonzoological-brandi.ngrok-free.dev/:splat"
+  to = "https://oxalbyjhvqbdwnbdrpwv.supabase.co/:splat"
   status = 200
   force = true
