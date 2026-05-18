@@ -1,0 +1,11 @@
+{
+  "backup_at": "2026-05-18T04:00:01.741Z",
+  "version": "4.1",
+  "tables": {
+    "kchaple_students": [],
+    "kchaple_attendance": [],
+    "kchaple_discipleship_logs": [],
+    "kchaple_discipleship_assignments": [],
+    "kchaple_snacks": []
+  }
+}
