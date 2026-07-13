@@ -548,6 +548,24 @@ function closeOverlay() {
 // ────────────────────────────────────
 // 서버 데이터 통신 (Supabase)
 // ────────────────────────────────────
+/**
+ * Supabase 1,000건 조회 제한 우회용 페이징 헬퍼 함수 (v4.3)
+ */
+async function fetchAllSupabaseRows(buildQueryFn, pageSize = 1000) {
+  let allRows = [];
+  let from = 0;
+  while (true) {
+    const to = from + pageSize - 1;
+    const { data, error } = await buildQueryFn().range(from, to);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allRows = allRows.concat(data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return allRows;
+}
+
 async function fetchServerStats() {
   if (!supabaseClient) return;
   
@@ -558,36 +576,38 @@ async function fetchServerStats() {
   snackListEl.innerHTML = '<div class="loading-spinner-wrap"><div class="spinner"></div></div>';
 
   try {
-    // 1. Fetch all students
-    const { data: students, error: studentsErr } = await supabaseClient.from('kchaple_students').select('*').limit(5000);
-    if (studentsErr) throw studentsErr;
+    // 1. Fetch all students (페이징 적용)
+    const students = await fetchAllSupabaseRows(() =>
+      supabaseClient.from('kchaple_students').select('*')
+    );
 
-    // 2. Fetch attendance and daily stats (Filter by current academic year)
-    const { data: attendance, error: attErr } = await supabaseClient
-      .from('kchaple_attendance')
-      .select('*')
-      .gte('date', START_DATE_LIMIT)
-      .lte('date', END_DATE_LIMIT)
-      .limit(20000);
-    if (attErr) throw attErr;
+    // 2. Fetch attendance and daily stats (Filter by current academic year, 페이징 적용)
+    const attendance = await fetchAllSupabaseRows(() =>
+      supabaseClient
+        .from('kchaple_attendance')
+        .select('*')
+        .gte('date', START_DATE_LIMIT)
+        .lte('date', END_DATE_LIMIT)
+    );
 
-    const { data: discipleship, error: dErr } = await supabaseClient
-      .from('kchaple_discipleship_logs')
-      .select('date')
-      .gte('date', START_DATE_LIMIT)
-      .lte('date', END_DATE_LIMIT)
-      .limit(5000);
-    if (dErr) console.error('제자훈련 로그 로드 실패:', dErr);
+    // Fetch discipleship logs (페이징 적용)
+    const discipleship = await fetchAllSupabaseRows(() =>
+      supabaseClient
+        .from('kchaple_discipleship_logs')
+        .select('date')
+        .gte('date', START_DATE_LIMIT)
+        .lte('date', END_DATE_LIMIT)
+    );
 
     allAttendanceRaw = attendance; // 전역 저장
 
-    // 3. Fetch snacks (Filter by cycle start date if possible)
-    const { data: snacks, error: snacksErr } = await supabaseClient
-      .from('kchaple_snacks')
-      .select('*')
-      .gte('created_at', settings.snackCycleStartDate)
-      .limit(5000);
-    if (snacksErr) throw snacksErr;
+    // 3. Fetch snacks (Filter by cycle start date if possible, 페이징 적용)
+    const snacks = await fetchAllSupabaseRows(() =>
+      supabaseClient
+        .from('kchaple_snacks')
+        .select('*')
+        .gte('created_at', settings.snackCycleStartDate)
+    );
 
     // Process dailyStatsData { 'YYYY-MM-DD': { chapel: n, discipleship: m } }
     dailyStatsData = {};
