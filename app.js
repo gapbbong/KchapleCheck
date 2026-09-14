@@ -868,7 +868,7 @@ async function submitAttendance() {
     // 2. Check duplicate today
     const { data: existing, error: existErr } = await supabaseClient
       .from('kchaple_attendance')
-      .select('id')
+      .select('student_id')
       .eq('student_id', studentId)
       .eq('date', dateStr)
       .maybeSingle();
