@@ -2,8 +2,8 @@ name: Scheduled Backup (Supabase to Git)
 
 on:
   schedule:
-    # 매주 월요일 14:00 KST (05:00 UTC)
-    - cron: '0 5 * * 1'
+    # 3일마다 14:00 KST (05:00 UTC) 자동 실행 (Supabase 일시정지 방지 및 자동 백업)
+    - cron: '0 5 */3 * *'
   workflow_dispatch: # 깃허브 페이지에서 수동 실행 가능하게 함
 
 jobs:
