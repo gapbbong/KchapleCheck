@@ -496,7 +496,12 @@ function showDailyDetail(date) {
         </div>
 
         <div class="detail-section">
-          <div class="detail-section-title">📝 전체 명단 (${students.length}명)</div>
+          <div class="detail-title-row">
+            <div class="detail-section-title">📝 전체 명단 (${students.length}명)</div>
+            <button class="detail-copy-btn" onclick="copyDailyStudents(this)">
+              <span class="material-icons-round">content_copy</span>복사
+            </button>
+          </div>
           <div class="detail-student-list">
             ${students.map(s => `
               <div class="student-row">
@@ -528,6 +533,26 @@ function showDailyDetail(date) {
 
   overlay.classList.add('show');
   overlay.classList.remove('hidden');
+}
+
+// 상세 통계 전체 명단 복사 (학번 이름, 한 줄에 한 명)
+async function copyDailyStudents(btn) {
+  const text = Array.from(document.querySelectorAll('.detail-student-list .student-row'))
+    .map(r => `${r.querySelector('.s-id').textContent} ${r.querySelector('.s-name').textContent}`)
+    .join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+  const label = btn.innerHTML;
+  btn.innerHTML = '<span class="material-icons-round">check</span>복사됨';
+  setTimeout(() => { btn.innerHTML = label; }, 1500);
 }
 
 // 오버레이 닫을 때 카드 복구 로직 추가 필요 (기존 출석 체크 오버레이와 호환)

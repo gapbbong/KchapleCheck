@@ -728,6 +728,17 @@ html, body {
   margin-bottom: 4px;
 }
 
+.detail-title-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.detail-copy-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 6px 12px; border: none; border-radius: 8px;
+  background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
+.detail-copy-btn .material-icons-round { font-size: 16px; }
+
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
